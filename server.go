@@ -22,10 +22,10 @@ func NewServer(config *Config, service *ProductService) *Server {
 
 func (s *Server) Handler() http.Handler {
 	router := http.NewServeMux()
-	router.HandleFunc("/products", s.findProducts)
-	router.HandleFunc("/products/create", s.createProduct)
-	router.HandleFunc("/products/update", s.updateProduct)
-	router.HandleFunc("/products/delete", s.deleteProduct)
+	router.HandleFunc("/products", s.listProducts)         //get
+	router.HandleFunc("/products/create", s.createProduct) // post
+	router.HandleFunc("/products/update", s.updateProduct) // put
+	router.HandleFunc("/products/delete", s.deleteProduct) // delete
 	return router
 }
 
@@ -37,8 +37,8 @@ func (s *Server) Run() {
 	httpServer.ListenAndServe()
 }
 
-func (server *Server) findProducts(writer http.ResponseWriter, request *http.Request) {
-	products := server.productService.FindAll()
+func (server *Server) listProducts(writer http.ResponseWriter, request *http.Request) {
+	products := server.productService.listProducts()
 	bytes, err := json.Marshal(products)
 	if err != nil {
 		http.Error(writer, "Bad Request", 400)
@@ -71,7 +71,7 @@ func (server *Server) createProduct(writer http.ResponseWriter, request *http.Re
 	if err != nil {
 		http.Error(writer, "Bad Request", 400)
 	}
-	err = server.productService.newProduct(product)
+	err = server.productService.createProduct(product)
 	if err != nil {
 		fmt.Errorf("Error in creating product %q, %v", product, err)
 		http.Error(writer, "Failed to create new product", 500)

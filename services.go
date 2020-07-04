@@ -13,14 +13,14 @@ func NewProductService(config *Config, repository *ProductRepository) *ProductSe
 	return &ProductService{config: config, repository: repository}
 }
 
-func (service *ProductService) FindAll() []*Product {
+func (service *ProductService) listProducts() []*Product {
 	if service.config.Enabled {
 		return service.repository.FindAll()
 	}
 	return []*Product{}
 }
 
-func (service *ProductService) newProduct(product Product) error {
+func (service *ProductService) createProduct(product Product) error {
 	if service.config.Enabled {
 		return service.repository.insertProduct(product)
 	}
