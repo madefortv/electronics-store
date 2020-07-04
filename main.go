@@ -1,13 +1,28 @@
 package main
 
 import (
-	"log"
-	"net/http"
+	"fmt"
 )
 
-func main() {
-	handler := http.HandlerFunc(StoreServer)
-	if err := http.ListenAndServe(":5000", handler); err != nil {
-		log.Fatalf("could not listen on port 5000 %v", err)
+func checkNoError(err error, format string) {
+	if err != nil {
+		panic(fmt.Sprintf(format, err))
 	}
+}
+
+func main() {
+	config := NewConfig()
+	db, err := ConnectDatabase(config)
+
+	if err != nil {
+		panic(err)
+	}
+
+	productRepository := NewProductRepository(db)
+
+	productService := NewProductService(config, productRepository)
+
+	server := NewServer(config, productService)
+
+	server.Run()
 }
