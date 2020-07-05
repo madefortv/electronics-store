@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"database/sql"
@@ -128,11 +128,11 @@ func (repository *ProductRepository) createDealsTable() {
 		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 		"x" integer,	
 		"y" integer,
-		"Type" 
-		"exclusive" BOOLEAN,
 		"percent" VARCHAR(8),
 		"coupon" VARCHAR(8),
+		"type" VARCHAR(16),
 		"name" VARCHAR(32),
+		"exclusive" BOOLEAN,
 	  );`
 
 	statement, err := repository.database.Prepare(createProductsTableSQL)

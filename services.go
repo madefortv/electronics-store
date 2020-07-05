@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"errors"
@@ -11,6 +11,13 @@ type ProductService struct {
 
 func NewProductService(config *Config, repository *ProductRepository) *ProductService {
 	return &ProductService{config: config, repository: repository}
+}
+
+func (service *ProductService) createDeal(deal Deal) error {
+	if service.config.Enabled {
+		return service.repository.insertDeal(deal)
+	}
+	return errors.New("Operation not permitted")
 }
 
 func (service *ProductService) listProducts() []*Product {
@@ -35,9 +42,9 @@ func (service *ProductService) updateProduct(product Product) error {
 	return errors.New("Operation Not Permitted")
 }
 
-func (service *ProductService) deleteProduct(code ProductCode) error {
+func (service *ProductService) deleteProduct(product Product) error {
 	if service.config.Enabled {
-		return service.repository.deleteProduct(code)
+		return service.repository.deleteProduct(product)
 	}
 	return errors.New("Operation Not Permitted")
 }

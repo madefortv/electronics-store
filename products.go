@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	_ "github.com/mattn/go-sqlite3"
@@ -51,12 +51,12 @@ func (repository *ProductRepository) updateProduct(product Product) error {
 	return err
 }
 
-func (repository *ProductRepository) deleteProduct(code ProductCode) error {
+func (repository *ProductRepository) deleteProduct(product Product) error {
 	tx, _ := repository.database.Begin()
 	stmt, _ := tx.Prepare(`DELETE FROM products WHERE id = ?`)
 	defer stmt.Close()
 
-	_, err := stmt.Exec(code.Id)
+	_, err := stmt.Exec(product.Id)
 	if err != nil {
 		tx.Rollback()
 		log.Fatalf("Statement error %v", err.Error())

@@ -1,9 +1,8 @@
-package main
+package store
 
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -19,24 +18,18 @@ func TestDeals(t *testing.T) {
 	productService := NewProductService(config, productRepository)
 	server := NewServer(config, productService)
 
-	productService.repository.createProductsTable()
 	productService.repository.createDealsTable()
-	productService.repository.createOfferingTable()
 
-	t.Run("get the list of products", func(t *testing.T) {
+	t.Run("insert new deal", func(t *testing.T) {
 
-		request, _ := http.NewRequest(http.MethodGet, "/products", nil)
-		want := []Product{{1, "laptop", "very fast", "1000.00"}, {2, "mouse", "much clicky", "10.00"}}
+		request := newDealRequest(0, 0, "Regular Price", "Retail", "0", "0")
+		want := ""
 
 		response := httptest.NewRecorder()
 		server.Handler().ServeHTTP(response, request)
-		var got []Product
-		err := json.NewDecoder(response.Body).Decode(&got)
-		if err != nil {
-			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
-		}
-		assertStatus(t, response.Code, http.StatusOK)
-		assertProducts(t, got, want)
+		var got string
+		assertStatus(t, response.Code, http.StatusCreated)
+		assertResponseBody(t, got, want)
 
 	})
 
@@ -130,20 +123,6 @@ func TestProducts(t *testing.T) {
 		assertProducts(t, got, want)
 	})
 
-	t.Run("inserts a malformed product", func(t *testing.T) {
-
-		request := buildBadRequest("create")
-		want := ""
-		var got string
-		response := httptest.NewRecorder()
-		server.Handler().ServeHTTP(response, request)
-
-		assertStatus(t, response.Code, http.StatusBadRequest)
-
-		assertResponseBody(t, got, want)
-
-	})
-
 }
 
 func setupTestDatabase(config *Config) (repository *ProductRepository) {
@@ -164,6 +143,23 @@ func setupTestDatabase(config *Config) (repository *ProductRepository) {
 	return repository
 }
 
+func newDealRequest(x, y int, name, coupon, percent string, dtype DealType) *http.Request {
+	deal := Deal{
+		0,
+		name,
+		dtype,
+		coupon,
+		percent,
+		x,
+		y,
+		true,
+	}
+	body, _ := json.Marshal(deal)
+	req, _ := http.NewRequest(http.MethodPost, "/deals", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", jsonContentType)
+	return req
+}
+
 func newCreateProductRequest(id int, name, description, price string) *http.Request {
 	product := Product{
 		0,
@@ -172,7 +168,7 @@ func newCreateProductRequest(id int, name, description, price string) *http.Requ
 		price,
 	}
 	body, _ := json.Marshal(product)
-	req, _ := http.NewRequest(http.MethodPost, "/products/create", bytes.NewBuffer(body))
+	req, _ := http.NewRequest(http.MethodPost, "/products", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", jsonContentType)
 	return req
 }
@@ -184,7 +180,7 @@ type BadRequestBody struct {
 func buildBadRequest(route string) *http.Request {
 	badBody := BadRequestBody{"bar"}
 	body, _ := json.Marshal(badBody)
-	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/products/%s", route), bytes.NewBuffer(body))
+	req, _ := http.NewRequest(http.MethodPost, "/products", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", jsonContentType)
 	return req
 }
@@ -197,7 +193,7 @@ func newUpdateProductRequest(id int, name, description, price string) *http.Requ
 		price,
 	}
 	body, _ := json.Marshal(product)
-	req, _ := http.NewRequest(http.MethodPost, "/products/update", bytes.NewBuffer(body))
+	req, _ := http.NewRequest(http.MethodPut, "/products", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", jsonContentType)
 	return req
 }
@@ -205,7 +201,7 @@ func newUpdateProductRequest(id int, name, description, price string) *http.Requ
 func newDeleteProductRequest(id int64) *http.Request {
 	code := ProductCode{id}
 	body, _ := json.Marshal(code)
-	req, _ := http.NewRequest(http.MethodPost, "/products/delete", bytes.NewBuffer(body))
+	req, _ := http.NewRequest(http.MethodDelete, "/products", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", jsonContentType)
 	return req
 }

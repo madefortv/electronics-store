@@ -1,4 +1,4 @@
-package main
+package store
 
 type Config struct {
 	Enabled      bool
