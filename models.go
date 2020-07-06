@@ -132,8 +132,7 @@ func (repository *ProductRepository) createDealsTable() {
 		"coupon" VARCHAR(8),
 		"type" VARCHAR(16),
 		"name" VARCHAR(32),
-		"exclusive" BOOLEAN,
-	  );`
+		"exclusive" BOOLEAN);`
 
 	statement, err := repository.database.Prepare(createProductsTableSQL)
 	defer statement.Close()
