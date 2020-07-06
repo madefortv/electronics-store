@@ -12,6 +12,7 @@ func checkNoError(err error, format string) {
 
 func main() {
 	config := NewConfig()
+
 	db, err := ConnectDatabase(config)
 
 	if err != nil {
