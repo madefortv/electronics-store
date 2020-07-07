@@ -11,6 +11,72 @@ import (
 	"testing"
 )
 
+func TestOfferings(t *testing.T) {
+	// scaffolding
+	config := NewConfig()
+	productRepository := setupTestDatabase(config)
+	productService := NewProductService(config, productRepository)
+	server := NewServer(config, productService)
+
+	// some deals to offer
+	productService.repository.createDealsTable()
+	productService.repository.insertDeal(Deal{Name: "Regular Price", Type: "Retail"})
+	productService.repository.insertDeal(Deal{Name: "Half Off", Type: "Percent", Percent: "50"})
+	productService.repository.insertDeal(Deal{Name: "Laptop Mouse Bundle", Type: "Bundle"})
+
+	// some products to list
+	productService.repository.createProductsTable()
+	productService.repository.insertProduct(Product{1, "laptop", "very fast", "1000.00"})
+	productService.repository.insertProduct(Product{2, "mouse", "much clicky", "10.00"})
+	productService.repository.insertProduct(Product{3, "monitor", "four kay", "100.00"})
+
+	// actual items
+	productService.repository.createOfferingsTable()
+	// regular priced mouse
+	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 1})
+	// laptop with a mouse free
+	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 3})
+	productService.repository.insertOffering(Offering{ProductId: 1, DealId: 3})
+	// 50% off monitors
+	productService.repository.insertOffering(Offering{ProductId: 3, DealId: 2})
+
+	/*
+		t.Run("get the list of deals", func(t *testing.T) {
+
+			request, _ := http.NewRequest(http.MethodGet, "/deals", nil)
+			want := []Deal{{Id: 1, Name: "Regular Price", Type: "Retail"}, {Id: 2, Name: "Half Off", Type: "Percent", Percent: "50"}}
+
+			response := httptest.NewRecorder()
+			server.Handler().ServeHTTP(response, request)
+			var got []Deal
+			err := json.NewDecoder(response.Body).Decode(&got)
+			if err != nil {
+				t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+			}
+			assertStatus(t, response.Code, http.StatusOK)
+			assertDeals(t, got, want)
+
+		})
+
+	*/
+	t.Run("inserts a new deal", func(t *testing.T) {
+
+		body, _ := json.Marshal(Deal{Name: "Half off any regular price item", Type: "Percent", Percent: "50"})
+		req, _ := http.NewRequest(http.MethodPost, "/deals", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		want := ""
+		var got string
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		assertStatus(t, response.Code, http.StatusCreated)
+
+		assertResponseBody(t, got, want)
+
+	})
+}
+
 func TestDeals(t *testing.T) {
 	// scaffolding
 	config := NewConfig()

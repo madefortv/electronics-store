@@ -6,6 +6,25 @@ import (
 	"log"
 )
 
+func (repository *ProductRepository) insertOffering(offering Offering) error {
+	log.Printf("%d, %d, %s, %v", offering.ProductId, offering.DealId, offering.ModifedPrice, offering.Active)
+	tx, _ := repository.database.Begin()
+	stmt, _ := tx.Prepare(`INSERT INTO offerings (product_id, deal_id, modified_price, active) VALUES (?, ?, ?, ?);`)
+	defer stmt.Close()
+	_, err := stmt.Exec(offering.ProductId, offering.DealId, offering.ModifedPrice, offering.Active)
+	if err != nil {
+		tx.Rollback()
+		log.Fatalf("Statement error %v", err.Error())
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Fatalf("DB Commit error %v", err.Error())
+	}
+
+	return err
+}
+
 func (repository *ProductRepository) insertDeal(deal Deal) error {
 	log.Printf("%s, %s, %s, %s, %d, %d, %v,", deal.Name, deal.Type, deal.Coupon, deal.Percent, deal.X, deal.Y, deal.Exclusive)
 	tx, _ := repository.database.Begin()
@@ -93,16 +112,6 @@ func (repository *ProductRepository) updateProduct(product Product) error {
 	if err != nil {
 		log.Fatalf("DB Commit error %v", err.Error())
 	}
-	/*
-		getProductSql := `SELECT id, name, description, price FROM products WHERE id = $1`
-		err = repository.database.QueryRow(getProductSql, product.Id).Scan(&id, &name, &description, &price)
-
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-
-		updatedProduct := Product{Id: id, Name: name, Description: description, Price: price}
-	*/
 	return err
 }
 
@@ -231,10 +240,10 @@ type Deal struct {
    @Active flag determines whether this deal is active
 */
 
-type ProductOffering struct {
+type Offering struct {
 	Id           int    `json:"id,omitempty"`
-	ProductId    int    `json:"product_id"`
-	DealId       int    `json:"deal_id"`
+	ProductId    int    `json:"product_id,omitempty"`
+	DealId       int    `json:"deal_id,omitempty"`
 	ModifedPrice string `json:"modified_price,omitempty"`
 	Active       bool   `json:"active,omitempty"`
 }
@@ -268,7 +277,7 @@ func (repository *ProductRepository) createProductsTable() {
 }
 
 func (repository *ProductRepository) createDealsTable() {
-	createProductsTableSQL := `CREATE TABLE deals (
+	createDealsTableSQL := `CREATE TABLE deals (
 	    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
 	    name VARCHAR(32) NOT NULL DEFAULT "Regular Price",
 	    type VARCHAR(16) NOT NULL DEFAULT "Retail",
@@ -279,7 +288,7 @@ func (repository *ProductRepository) createDealsTable() {
 	    exclusive BOOLEAN NOT NULL DEFAULT 1
 	);`
 
-	statement, err := repository.database.Prepare(createProductsTableSQL)
+	statement, err := repository.database.Prepare(createDealsTableSQL)
 	defer statement.Close()
 	if err != nil {
 		log.Fatalf("Failed to create table: %v", err.Error())
@@ -287,17 +296,17 @@ func (repository *ProductRepository) createDealsTable() {
 	statement.Exec()
 }
 
-func (repository *ProductRepository) createOfferingTable() {
-	createProductsTableSQL := `CREATE TABLE offerings (
-	    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, 
-	    product_id INTEGER NOT NULL, 
-	    deal_id INTEGER NOT NULL, 
-	    active BOOLEAN DEFAULT 1 NOT NULL, 
-	    modifed_price VARCHAR(8),  
-	    FOREIGN KEY (product_id) REFERENCES products (id), 
+func (repository *ProductRepository) createOfferingsTable() {
+	createOfferingsTableSQL := `CREATE TABLE offerings (
+	    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	    product_id INTEGER NOT NULL,
+	    deal_id INTEGER NOT NULL,
+	    modified_price VARCHAR(8) NOT NULL DEFAULT "NAN",
+	    active BOOLEAN NOT NULL DEFAULT 1,
+	    FOREIGN KEY (product_id) REFERENCES products (id),
 	    FOREIGN KEY (deal_id) REFERENCES deals (id) );`
 
-	statement, err := repository.database.Prepare(createProductsTableSQL)
+	statement, err := repository.database.Prepare(createOfferingsTableSQL)
 	defer statement.Close()
 	if err != nil {
 		log.Fatalf("Failed to create table: %v", err.Error())
