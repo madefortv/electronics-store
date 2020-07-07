@@ -27,6 +27,8 @@ func (s *Server) Handler() http.Handler {
 	router.HandleFunc("/products/update", s.updateProduct)
 	router.HandleFunc("/products/delete", s.deleteProduct)
 	router.HandleFunc("/deals", s.deals)
+	router.HandleFunc("/offerings", s.deals)
+	router.HandleFunc("/cart", s.deals)
 	return router
 }
 
@@ -38,29 +40,31 @@ func (s *Server) Run() {
 	httpServer.ListenAndServe()
 }
 
-/*
 func (server *Server) offerings(writer http.ResponseWriter, request *http.Request) {
 	switch request.Method {
-	case http.MethodGet:
 
-		deals := server.productService.listOfferings()
-		bytes, err := json.Marshal(deals)
-		if err != nil {
-			http.Error(writer, "Bad Request", 400)
-		}
-		writer.Header().Set("Content-Type", jsonContentType)
-		writer.WriteHeader(http.StatusOK)
-		writer.Write(bytes)
+	/*
+		case http.MethodGet:
+
+			deals := server.productService.listOfferings()
+			bytes, err := json.Marshal(deals)
+			if err != nil {
+				http.Error(writer, "Bad Request", 400)
+			}
+			writer.Header().Set("Content-Type", jsonContentType)
+			writer.WriteHeader(http.StatusOK)
+			writer.Write(bytes)
+	*/
 
 	case http.MethodPost:
 
-		var deal Deal
-		err := json.NewDecoder(request.Body).Decode(&deal)
+		var offering Offering
+		err := json.NewDecoder(request.Body).Decode(&offering)
 		if err != nil {
 			http.Error(writer, "Bad Request", 400)
 		}
 
-		err = server.productService.newDeal(deal)
+		err = server.productService.newOffering(offering)
 		if err != nil {
 			http.Error(writer, "Failed create new deal", 500)
 		}
@@ -68,7 +72,6 @@ func (server *Server) offerings(writer http.ResponseWriter, request *http.Reques
 	}
 
 }
-*/
 
 func (server *Server) deals(writer http.ResponseWriter, request *http.Request) {
 	switch request.Method {

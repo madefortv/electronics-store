@@ -57,3 +57,21 @@ func (service *ProductService) listDeals() []*Deal {
 	}
 	return []*Deal{}
 }
+
+/* Offerings */
+func (service *ProductService) newOffering(offering Offering) error {
+	if service.config.Enabled {
+		return service.repository.insertOffering(offering)
+	}
+	return errors.New("Operation Not Permitted")
+}
+
+/*
+func (service *ProductService) listOfferings() []*Offering {
+	if service.config.Enabled {
+		return service.repository.listOfferings()
+	}
+	return []*Offering{}
+}
+
+*/

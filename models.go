@@ -248,6 +248,32 @@ type Offering struct {
 	Active       bool   `json:"active,omitempty"`
 }
 
+/* After a join of offerings x products x deals, we get a product offering */
+type ProductOffering struct {
+	Id           int      `json:"id,omitempty"`
+	ModifedPrice string   `json:"modified_price,omitempty"`
+	DealName     string   `json:"deal_name,omitempty"`
+	Type         DealType `json:"type,omitempty"`
+	Coupon       string   `json:"coupon,omitempty"`
+	Percent      string   `json:"percent,omitempty"`
+	X            int      `json:"x,omitempty"`
+	Y            int      `json:"y,omitempty"`
+	Exclusive    bool     `json:"exclusive,omitempty"`
+	ProductName  string   `json:"product_name"`
+	Description  string   `json:"description,omitempty"`
+	Price        string   `json:"price"`
+}
+
+type ShoppingCart struct {
+	Items []Item `json:"items"`
+	Total string `json:"total"`
+}
+
+type Item struct {
+	Product Product `json:"product"`
+	Count   int     `json:"count"`
+}
+
 func NewProductRepository(database *sql.DB) *ProductRepository {
 	return &ProductRepository{database: database}
 }
