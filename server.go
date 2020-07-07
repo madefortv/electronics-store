@@ -26,6 +26,7 @@ func (s *Server) Handler() http.Handler {
 	router.HandleFunc("/products/create", s.createProduct)
 	router.HandleFunc("/products/update", s.updateProduct)
 	router.HandleFunc("/products/delete", s.deleteProduct)
+	router.HandleFunc("/deals", s.deals)
 	return router
 }
 
@@ -37,8 +38,70 @@ func (s *Server) Run() {
 	httpServer.ListenAndServe()
 }
 
+/*
+func (server *Server) offerings(writer http.ResponseWriter, request *http.Request) {
+	switch request.Method {
+	case http.MethodGet:
+
+		deals := server.productService.listOfferings()
+		bytes, err := json.Marshal(deals)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+		writer.Header().Set("Content-Type", jsonContentType)
+		writer.WriteHeader(http.StatusOK)
+		writer.Write(bytes)
+
+	case http.MethodPost:
+
+		var deal Deal
+		err := json.NewDecoder(request.Body).Decode(&deal)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+
+		err = server.productService.newDeal(deal)
+		if err != nil {
+			http.Error(writer, "Failed create new deal", 500)
+		}
+		writer.WriteHeader(http.StatusCreated)
+	}
+
+}
+*/
+
+func (server *Server) deals(writer http.ResponseWriter, request *http.Request) {
+	switch request.Method {
+	case http.MethodGet:
+
+		deals := server.productService.listDeals()
+		bytes, err := json.Marshal(deals)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+		writer.Header().Set("Content-Type", jsonContentType)
+		writer.WriteHeader(http.StatusOK)
+		writer.Write(bytes)
+
+	case http.MethodPost:
+
+		var deal Deal
+		err := json.NewDecoder(request.Body).Decode(&deal)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+
+		err = server.productService.newDeal(deal)
+		if err != nil {
+			http.Error(writer, "Failed create new deal", 500)
+		}
+		writer.WriteHeader(http.StatusCreated)
+	}
+
+}
+
 func (server *Server) findProducts(writer http.ResponseWriter, request *http.Request) {
-	products := server.productService.FindAll()
+	products := server.productService.listProducts()
 	bytes, err := json.Marshal(products)
 	if err != nil {
 		http.Error(writer, "Bad Request", 400)
@@ -56,7 +119,7 @@ func (server *Server) deleteProduct(writer http.ResponseWriter, request *http.Re
 		http.Error(writer, "Bad Request", 400)
 	}
 
-	err = server.productService.repository.deleteProduct(code)
+	err = server.productService.deleteProduct(code)
 	if err != nil {
 		fmt.Errorf("Error in deleting product with id %d, %v", code.Id, err)
 		http.Error(writer, "Failed to delete new product", 500)

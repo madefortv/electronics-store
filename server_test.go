@@ -11,6 +11,55 @@ import (
 	"testing"
 )
 
+func TestDeals(t *testing.T) {
+	// scaffolding
+	config := NewConfig()
+	productRepository := setupTestDatabase(config)
+	productService := NewProductService(config, productRepository)
+	server := NewServer(config, productService)
+
+	// database reset seed
+	productService.repository.createDealsTable()
+
+	productService.repository.insertDeal(Deal{Name: "Regular Price", Type: "Retail"})
+	productService.repository.insertDeal(Deal{Name: "Half Off", Type: "Percent", Percent: "50"})
+	//productService.repository.insertDeal(Deal{Name: "Buy One Get One Free", Type: "BuyXGetYFree", X: 1, Y: 1})
+	//productService.repository.insertDeal(Deal{Name: "Get a Mouse free with any Laptop", Type: "Bundle"})
+
+	t.Run("get the list of deals", func(t *testing.T) {
+
+		request, _ := http.NewRequest(http.MethodGet, "/deals", nil)
+		want := []Deal{{Id: 1, Name: "Regular Price", Type: "Retail"}, {Id: 2, Name: "Half Off", Type: "Percent", Percent: "50"}}
+
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, request)
+		var got []Deal
+		err := json.NewDecoder(response.Body).Decode(&got)
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+		}
+		assertStatus(t, response.Code, http.StatusOK)
+		assertDeals(t, got, want)
+
+	})
+	t.Run("inserts a new deal", func(t *testing.T) {
+
+		body, _ := json.Marshal(Deal{Name: "Half off any regular price item", Type: "Percent", Percent: "50"})
+		req, _ := http.NewRequest(http.MethodPost, "/deals", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		want := ""
+		var got string
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		assertStatus(t, response.Code, http.StatusCreated)
+
+		assertResponseBody(t, got, want)
+
+	})
+}
+
 func TestProducts(t *testing.T) {
 	// scaffolding
 	config := NewConfig()
@@ -209,6 +258,13 @@ func assertProduct(t *testing.T, got, want Product) {
 }
 
 func assertProducts(t *testing.T, got, want []Product) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v want %v", got, want)
+	}
+}
+
+func assertDeals(t *testing.T, got, want []Deal) {
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v want %v", got, want)

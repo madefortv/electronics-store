@@ -6,6 +6,60 @@ import (
 	"log"
 )
 
+func (repository *ProductRepository) insertDeal(deal Deal) error {
+	log.Printf("%s, %s, %s, %s, %d, %d, %v,", deal.Name, deal.Type, deal.Coupon, deal.Percent, deal.X, deal.Y, deal.Exclusive)
+	tx, _ := repository.database.Begin()
+	stmt, _ := tx.Prepare(`INSERT INTO deals (name, type, coupon, percent, x, y, exclusive) VALUES (?, ?, ?, ?, ?, ?, ?);`)
+	defer stmt.Close()
+	_, err := stmt.Exec(deal.Name, deal.Type, deal.Coupon, deal.Percent, deal.X, deal.Y, deal.Exclusive)
+	if err != nil {
+		tx.Rollback()
+		log.Fatalf("Statement error %v", err.Error())
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Fatalf("DB Commit error %v", err.Error())
+	}
+
+	return err
+}
+
+func (repository *ProductRepository) listDeals() []*Deal {
+	rows, _ := repository.database.Query(`SELECT * FROM deals;`)
+	defer rows.Close()
+
+	deals := []*Deal{}
+
+	for rows.Next() {
+		var (
+			id        int
+			name      string
+			btype     DealType
+			coupon    string
+			percent   string
+			x         int
+			y         int
+			exclusive bool
+		)
+
+		rows.Scan(&id, &name, &btype, &coupon, &percent, &x, &y, &exclusive)
+
+		deals = append(deals, &Deal{
+			Id:        id,
+			Name:      name,
+			Type:      btype,
+			Coupon:    coupon,
+			Percent:   percent,
+			X:         x,
+			Y:         y,
+			Exclusive: exclusive,
+		})
+	}
+
+	return deals
+}
+
 func (repository *ProductRepository) insertProduct(product Product) error {
 	tx, _ := repository.database.Begin()
 	stmt, _ := tx.Prepare(`INSERT INTO products (name, description, price) VALUES (?, ?, ?);`)
@@ -70,7 +124,7 @@ func (repository *ProductRepository) deleteProduct(code ProductCode) error {
 	return err
 }
 
-func (repository *ProductRepository) FindAll() []*Product {
+func (repository *ProductRepository) listProducts() []*Product {
 	rows, _ := repository.database.Query(`SELECT id, name, description, price FROM products;`)
 	defer rows.Close()
 
@@ -100,12 +154,12 @@ func (repository *ProductRepository) FindAll() []*Product {
 type DealType string
 
 const (
-	Retail           DealType = "Retail"
-	Flat                      = "Flat"
-	Percent                   = "Percent"
-	Bundle                    = "Bundle"
-	BuyOneGetOneFree          = "BuyOneGetOneFree"
-	Other                     = "Other"
+	Retail       DealType = "Retail"
+	Flat                  = "Flat"
+	Percent               = "Percent"
+	Bundle                = "Bundle"
+	BuyXGetYFree          = "BuyXGetYFree"
+	Other                 = "Other"
 )
 
 /*
@@ -128,9 +182,9 @@ type ProductCode struct {
 */
 
 type Product struct {
-	Id          int    `json:"id"`
+	Id          int    `json:"id,omitempty"`
 	Name        string `json:"name"`
-	Description string `json:"description"`
+	Description string `json:"description,omitempty"`
 	Price       string `json:"price"`
 }
 
@@ -148,16 +202,15 @@ type Product struct {
 
    TODO: Add start and end timestamps
 */
-
 type Deal struct {
-	Id        int      `json:"id"`
-	Name      string   `json:"name"`
-	Type      DealType `json:"type"`
-	Coupon    string   `json:"coupon"`
-	Percent   string   `json:"percent"`
-	X         int      `json:"x"`
-	Y         int      `json:"y"`
-	Exclusive bool     `json:"exclusive"`
+	Id        int      `json:"id,omitempty"`
+	Name      string   `json:"name,omitempty"`
+	Type      DealType `json:"type,omitempty"`
+	Coupon    string   `json:"coupon,omitempty"`
+	Percent   string   `json:"percent,omitempty"`
+	X         int      `json:"x,omitempty"`
+	Y         int      `json:"y,omitempty"`
+	Exclusive bool     `json:"exclusive,omitempty"`
 }
 
 /* The offering model is a relationship between one or more products and
@@ -179,11 +232,11 @@ type Deal struct {
 */
 
 type ProductOffering struct {
-	Id           int    `json:"id"`
+	Id           int    `json:"id,omitempty"`
 	ProductId    int    `json:"product_id"`
 	DealId       int    `json:"deal_id"`
-	ModifedPrice string `json:"modified_price"`
-	Active       bool   `json:"active"`
+	ModifedPrice string `json:"modified_price,omitempty"`
+	Active       bool   `json:"active,omitempty"`
 }
 
 func NewProductRepository(database *sql.DB) *ProductRepository {
@@ -216,14 +269,15 @@ func (repository *ProductRepository) createProductsTable() {
 
 func (repository *ProductRepository) createDealsTable() {
 	createProductsTableSQL := `CREATE TABLE deals (
-		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-		"x" integer,	
-		"y" integer,
-		"percent" VARCHAR(8),
-		"coupon" VARCHAR(8),
-		"type" VARCHAR(16),
-		"name" VARCHAR(32),
-		"exclusive" BOOLEAN);`
+	    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	    name VARCHAR(32) NOT NULL DEFAULT "Regular Price",
+	    type VARCHAR(16) NOT NULL DEFAULT "Retail",
+	    coupon VARCHAR(8) NOT NULL DEFAULT "0.00",
+	    percent VARCHAR(8) NOT NULL DEFAULT "0.00",
+	    x INTEGER NOT NULL DEFAULT 0,
+	    y INTEGER NOT NULL DEFAULT 0,
+	    exclusive BOOLEAN NOT NULL DEFAULT 1
+	);`
 
 	statement, err := repository.database.Prepare(createProductsTableSQL)
 	defer statement.Close()
@@ -234,15 +288,14 @@ func (repository *ProductRepository) createDealsTable() {
 }
 
 func (repository *ProductRepository) createOfferingTable() {
-	createProductsTableSQL := `CREATE TABLE offering (
-		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-		"product_id" integer,
-		"deal_id" integer,
-		"active" BOOLEAN,
-		"modified_price" VARCHAR(8),
-		"FOREIGN KEY(product_id) REFERENCES products(id),
-		"FOREIGN_KEY(deal_id) REFERENCES deals(id)
-	  );`
+	createProductsTableSQL := `CREATE TABLE offerings (
+	    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, 
+	    product_id INTEGER NOT NULL, 
+	    deal_id INTEGER NOT NULL, 
+	    active BOOLEAN DEFAULT 1 NOT NULL, 
+	    modifed_price VARCHAR(8),  
+	    FOREIGN KEY (product_id) REFERENCES products (id), 
+	    FOREIGN KEY (deal_id) REFERENCES deals (id) );`
 
 	statement, err := repository.database.Prepare(createProductsTableSQL)
 	defer statement.Close()

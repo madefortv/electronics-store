@@ -13,9 +13,10 @@ func NewProductService(config *Config, repository *ProductRepository) *ProductSe
 	return &ProductService{config: config, repository: repository}
 }
 
-func (service *ProductService) FindAll() []*Product {
+/* Products */
+func (service *ProductService) listProducts() []*Product {
 	if service.config.Enabled {
-		return service.repository.FindAll()
+		return service.repository.listProducts()
 	}
 	return []*Product{}
 }
@@ -40,4 +41,19 @@ func (service *ProductService) deleteProduct(code ProductCode) error {
 		return service.repository.deleteProduct(code)
 	}
 	return errors.New("Operation Not Permitted")
+}
+
+/* Deals */
+func (service *ProductService) newDeal(deal Deal) error {
+	if service.config.Enabled {
+		return service.repository.insertDeal(deal)
+	}
+	return errors.New("Operation Not Permitted")
+}
+
+func (service *ProductService) listDeals() []*Deal {
+	if service.config.Enabled {
+		return service.repository.listDeals()
+	}
+	return []*Deal{}
 }
