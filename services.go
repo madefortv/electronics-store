@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log"
 )
 
 type ProductService struct {
@@ -27,6 +28,16 @@ func (service *ProductService) updateCart(item Item) error {
 }
 
 func (service *ProductService) calculateTotalPrice() string {
+
+	productOfferings := service.repository.getProductOfferings()
+
+	for i := range productOfferings {
+		po := *productOfferings[i]
+		log.Printf("%v", po)
+	}
+
+	log.Printf("got %d", len(productOfferings))
+
 	return "100.00"
 }
 

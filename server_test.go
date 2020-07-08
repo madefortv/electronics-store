@@ -36,13 +36,10 @@ func TestShoppingCart(t *testing.T) {
 
 	// actual items
 	productService.repository.createOfferingsTable()
-	// regular priced mouse
-	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 1})
-	// laptop with a mouse free
-	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 3})
-	productService.repository.insertOffering(Offering{ProductId: 1, DealId: 3})
-	// 50% off monitors
-	productService.repository.insertOffering(Offering{ProductId: 3, DealId: 2})
+	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 1, Active: true})
+	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 3, Active: true, ModifiedPrice: "1000.00"})
+	productService.repository.insertOffering(Offering{ProductId: 1, DealId: 3, Active: true, ModifiedPrice: "1000.00"})
+	productService.repository.insertOffering(Offering{ProductId: 3, DealId: 2, Active: true})
 
 	t.Run("get empty cart", func(t *testing.T) {
 
