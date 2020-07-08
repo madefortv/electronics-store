@@ -6,8 +6,148 @@ import (
 	"log"
 )
 
+/* Get all the relevant deals  and offerings */
+func (repository *ProductRepository) getProductOfferings() {
+	rows, _ := repository.database.Query(`SELECT 
+	PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, modified_price
+	    FROM 
+	    (
+		SELECT products.id AS PID, 
+		products.name AS PNAME, 
+		products.price, 
+		deals.id AS DID, 
+		deals.name AS DNAME, 
+		deals.type, 
+		deals.x, 
+		deals.y, 
+		deals.coupon, 
+		deals.percent, 
+		offerings.modified_price 
+		    FROM offerings 
+			INNER JOIN products ON products.id = offerings.product_id 
+			INNER JOIN deals on deals.id = offerings.deal_id 
+			WHERE active = 1
+	    ) 
+	    INNER JOIN cart on cart.product_id = pid WHERE cart.quantity > 0;`)
+
+	var productOfferings []ProductOffering
+	for rows.Next() {
+		var (
+			pid            int
+			did            int
+			pname          string
+			dname          string
+			dtype          DealType
+			price          string
+			quantity       int
+			x              int
+			y              int
+			coupon         string
+			percent        string
+			modified_price string
+		)
+		rows.Scan(&pid, &did, &pname, &dname, &price, &quantity, &x, &y, &coupon, &percent, &modified_price)
+
+		productOfferings = append(productOfferings, ProductOffering{
+			ProductId:    pid,
+			DealId:       did,
+			ProductName:  pname,
+			DealName:     dname,
+			Type:         dtype,
+			Price:        price,
+			Quantity:     quantity,
+			X:            x,
+			Y:            y,
+			Coupon:       coupon,
+			Percent:      percent,
+			ModifedPrice: modified_price,
+		})
+
+		type ProductOffering struct {
+		}
+
+		// for each pid and quantity in results, check for bundles, buyxgety, percent, coupon, retail
+	}
+
+}
+
+func (repository *ProductRepository) listCart() []Item {
+	rows, _ := repository.database.Query(`SELECT 
+		products.id, 
+		products.name,
+		products.description,
+		products.price,
+		cart.quantity 
+		FROM cart INNER JOIN 
+		products ON products.id = cart.product_id;`)
+
+	defer rows.Close()
+
+	var items []Item
+
+	for rows.Next() {
+		var (
+			id          int
+			name        string
+			price       string
+			description string
+			quantity    int
+		)
+
+		rows.Scan(&id, &name, &description, &price, &quantity)
+
+		items = append(items, Item{
+			Product{
+				Id:          id,
+				Name:        name,
+				Description: description,
+				Price:       price,
+			},
+			quantity,
+		})
+	}
+
+	return items
+}
+
+func (repository *ProductRepository) addToCart(product Product) error {
+	tx, _ := repository.database.Begin()
+	stmt, _ := tx.Prepare(`INSERT INTO cart (product_id) VALUES (?);`)
+	defer stmt.Close()
+	_, err := stmt.Exec(product.Id)
+	if err != nil {
+		tx.Rollback()
+		log.Fatalf("Statement error %v", err.Error())
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Fatalf("DB Commit error %v", err.Error())
+	}
+
+	return err
+}
+
+func (repository *ProductRepository) updateCart(item Item) error {
+	tx, _ := repository.database.Begin()
+	stmt, _ := tx.Prepare(`UPDATE cart SET quantity = ? WHERE product_id = ?;`)
+	defer stmt.Close()
+	_, err := stmt.Exec(item.Quantity, item.Product.Id)
+	if err != nil {
+		tx.Rollback()
+		log.Fatalf("Statement error %v", err.Error())
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Fatalf("DB Commit error %v", err.Error())
+	}
+
+	return err
+}
+
+/* Offerings */
 func (repository *ProductRepository) insertOffering(offering Offering) error {
-	log.Printf("%d, %d, %s, %v", offering.ProductId, offering.DealId, offering.ModifedPrice, offering.Active)
 	tx, _ := repository.database.Begin()
 	stmt, _ := tx.Prepare(`INSERT INTO offerings (product_id, deal_id, modified_price, active) VALUES (?, ?, ?, ?);`)
 	defer stmt.Close()
@@ -25,8 +165,8 @@ func (repository *ProductRepository) insertOffering(offering Offering) error {
 	return err
 }
 
+/* Deals */
 func (repository *ProductRepository) insertDeal(deal Deal) error {
-	log.Printf("%s, %s, %s, %s, %d, %d, %v,", deal.Name, deal.Type, deal.Coupon, deal.Percent, deal.X, deal.Y, deal.Exclusive)
 	tx, _ := repository.database.Begin()
 	stmt, _ := tx.Prepare(`INSERT INTO deals (name, type, coupon, percent, x, y, exclusive) VALUES (?, ?, ?, ?, ?, ?, ?);`)
 	defer stmt.Close()
@@ -160,6 +300,31 @@ func (repository *ProductRepository) listProducts() []*Product {
 	return products
 }
 
+func (repository *ProductRepository) getProduct(product Product) (Product, error) {
+	row := repository.database.QueryRow(`SELECT id, name, description, price FROM products WHERE id = ?;`, product.Id)
+
+	var (
+		id          int
+		name        string
+		description string
+		price       string
+	)
+
+	err := row.Scan(&id, &name, &description, &price)
+	if err != nil {
+		log.Fatalf("Query error %v", err.Error())
+	}
+
+	product = Product{
+		Id:          id,
+		Name:        name,
+		Description: description,
+		Price:       price,
+	}
+
+	return product, err
+}
+
 type DealType string
 
 const (
@@ -250,7 +415,9 @@ type Offering struct {
 
 /* After a join of offerings x products x deals, we get a product offering */
 type ProductOffering struct {
-	Id           int      `json:"id,omitempty"`
+	ProductId    int      `json:"product_id,omitempty"`
+	DealId       int      `json:"deal_id,omitempty"`
+	Quantity     int      `json:"quantity,omitempty"`
 	ModifedPrice string   `json:"modified_price,omitempty"`
 	DealName     string   `json:"deal_name,omitempty"`
 	Type         DealType `json:"type,omitempty"`
@@ -270,8 +437,8 @@ type ShoppingCart struct {
 }
 
 type Item struct {
-	Product Product `json:"product"`
-	Count   int     `json:"count"`
+	Product  Product `json:"product"`
+	Quantity int     `json:"quantity"`
 }
 
 func NewProductRepository(database *sql.DB) *ProductRepository {
@@ -284,6 +451,22 @@ type ProductRepository struct {
 
 func ConnectDatabase(config *Config) (*sql.DB, error) {
 	return sql.Open("sqlite3", config.DatabasePath)
+}
+
+func (repository *ProductRepository) createCartTable() {
+	createProductsTableSQL := `CREATE TABLE cart (
+		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+		"product_id" INTEGER NOT NULL,
+		"quantity" INTEGER NOT NULL DEFAULT 1,
+		FOREIGN KEY (product_id) REFERENCES products (id)
+	  );`
+
+	statement, err := repository.database.Prepare(createProductsTableSQL)
+	defer statement.Close()
+	if err != nil {
+		log.Fatalf("Failed to create table: %v", err.Error())
+	}
+	statement.Exec()
 }
 
 func (repository *ProductRepository) createProductsTable() {

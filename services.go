@@ -13,7 +13,37 @@ func NewProductService(config *Config, repository *ProductRepository) *ProductSe
 	return &ProductService{config: config, repository: repository}
 }
 
+/* Shopping Cart */
+func (service *ProductService) listCartItems() []Item {
+	return service.repository.listCart()
+}
+
+func (service *ProductService) addToCart(product Product) error {
+	return service.repository.addToCart(product)
+}
+
+func (service *ProductService) updateCart(item Item) error {
+	return service.repository.updateCart(item)
+}
+
+func (service *ProductService) calculateTotalPrice() string {
+	return "100.00"
+}
+
 /* Products */
+func (service *ProductService) getProduct(product Product) Product {
+	if service.config.Enabled {
+		// check if the product exists, otherwise return empty
+		product, err := service.repository.getProduct(product)
+		if err != nil {
+			return Product{}
+		}
+		return product
+	}
+	return Product{}
+
+}
+
 func (service *ProductService) listProducts() []*Product {
 	if service.config.Enabled {
 		return service.repository.listProducts()
@@ -65,13 +95,3 @@ func (service *ProductService) newOffering(offering Offering) error {
 	}
 	return errors.New("Operation Not Permitted")
 }
-
-/*
-func (service *ProductService) listOfferings() []*Offering {
-	if service.config.Enabled {
-		return service.repository.listOfferings()
-	}
-	return []*Offering{}
-}
-
-*/

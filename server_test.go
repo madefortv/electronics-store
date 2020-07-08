@@ -17,6 +17,8 @@ func TestShoppingCart(t *testing.T) {
 	productRepository := setupTestDatabase(config)
 	productService := NewProductService(config, productRepository)
 	server := NewServer(config, productService)
+	//add cart table
+	productService.repository.createCartTable()
 
 	// some deals to offer
 	productService.repository.createDealsTable()
@@ -42,12 +44,13 @@ func TestShoppingCart(t *testing.T) {
 	// 50% off monitors
 	productService.repository.insertOffering(Offering{ProductId: 3, DealId: 2})
 
-	t.Run("Get An Empty Shopping Cart", func(t *testing.T) {
+	t.Run("get empty cart", func(t *testing.T) {
 
 		req, _ := http.NewRequest(http.MethodGet, "/cart", nil)
 		req.Header.Set("Content-Type", jsonContentType)
 
-		var want ShoppingCart
+		want := ShoppingCart{}
+
 		var got ShoppingCart
 		response := httptest.NewRecorder()
 		server.Handler().ServeHTTP(response, req)
@@ -59,6 +62,54 @@ func TestShoppingCart(t *testing.T) {
 
 		assertStatus(t, response.Code, http.StatusOK)
 
+		assertShoppingCart(t, got, want)
+	})
+
+	t.Run("Add an item to a shopping cart", func(t *testing.T) {
+
+		body, _ := json.Marshal(Product{Id: 3, Name: "monitor", Description: "four kay", Price: "100.00"})
+
+		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 1}}
+		want := ShoppingCart{Items: items, Total: "100.00"}
+
+		var got ShoppingCart
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		err := json.NewDecoder(response.Body).Decode(&got)
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+		}
+
+		assertStatus(t, response.Code, http.StatusOK)
+
+		assertShoppingCart(t, got, want)
+
+	})
+
+	t.Run("Modify the quantity of a certain product", func(t *testing.T) {
+
+		body, _ := json.Marshal(Item{Product{3, "monitor", "four kay", "100.00"}, 2})
+
+		req, _ := http.NewRequest(http.MethodPut, "/cart", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		items := []Item{{Product{3, "monitor", "four kay", "100.00"}, 2}}
+		want := ShoppingCart{Items: items, Total: "200.00"}
+
+		var got ShoppingCart
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		err := json.NewDecoder(response.Body).Decode(&got)
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+		}
+
+		assertStatus(t, response.Code, http.StatusOK)
 		assertShoppingCart(t, got, want)
 	})
 

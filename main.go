@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 )
 
@@ -8,6 +9,11 @@ func checkNoError(err error, format string) {
 	if err != nil {
 		panic(fmt.Sprintf(format, err))
 	}
+}
+
+func init() {
+	gob.Register(&Item{})
+	gob.Register(&ShoppingCart{})
 }
 
 func main() {

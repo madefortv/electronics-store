@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	//"github.com/shopspring/decimal"
 	"net/http"
 )
 
@@ -27,8 +28,8 @@ func (s *Server) Handler() http.Handler {
 	router.HandleFunc("/products/update", s.updateProduct)
 	router.HandleFunc("/products/delete", s.deleteProduct)
 	router.HandleFunc("/deals", s.deals)
-	router.HandleFunc("/offerings", s.deals)
-	router.HandleFunc("/cart", s.deals)
+	router.HandleFunc("/offerings", s.offerings)
+	router.HandleFunc("/cart", s.cart)
 	return router
 }
 
@@ -40,6 +41,101 @@ func (s *Server) Run() {
 	httpServer.ListenAndServe()
 }
 
+/* Cart Handler */
+func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
+
+	switch request.Method {
+
+	case http.MethodPost:
+		var shoppingCart ShoppingCart
+		var product Product
+		err := json.NewDecoder(request.Body).Decode(&product)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+
+		p := server.productService.getProduct(product)
+		if (Product{} == p) {
+			http.Error(writer, "Product Does Not Exist", 404)
+		}
+		err = server.productService.addToCart(p)
+		if err != nil {
+			http.Error(writer, "Failed to add product to cart", 500)
+		}
+
+		items := server.productService.listCartItems()
+
+		if len(items) == 0 {
+			shoppingCart = ShoppingCart{}
+		} else {
+			total := server.productService.calculateTotalPrice()
+			shoppingCart = ShoppingCart{items, total}
+		}
+
+		bytes, err := json.Marshal(shoppingCart)
+		writer.Header().Set("Content-Type", jsonContentType)
+		writer.WriteHeader(http.StatusOK)
+		writer.Write(bytes)
+		/*
+			total, err := decimal.NewFromString(shoppingCart.Total)
+			if err != nil {
+				shoppingCart.Total = "0.0"
+			}
+			if total.IsZero()
+		*/
+	case http.MethodPut:
+		var shoppingCart ShoppingCart
+		var item Item
+		err := json.NewDecoder(request.Body).Decode(&item)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+
+		err = server.productService.updateCart(item)
+		if err != nil {
+			http.Error(writer, "Failed to update cart", 500)
+		}
+
+		items := server.productService.listCartItems()
+
+		if len(items) == 0 {
+			shoppingCart = ShoppingCart{}
+		} else {
+			total := server.productService.calculateTotalPrice()
+			shoppingCart = ShoppingCart{items, total}
+		}
+
+		bytes, err := json.Marshal(shoppingCart)
+		if err != nil {
+			http.Error(writer, "Failed to write response", 500)
+		}
+		writer.Header().Set("Content-Type", jsonContentType)
+		writer.WriteHeader(http.StatusOK)
+		writer.Write(bytes)
+
+	case http.MethodGet:
+		items := server.productService.listCartItems()
+		var shoppingCart ShoppingCart
+
+		if len(items) == 0 {
+			shoppingCart = ShoppingCart{}
+		} else {
+			shoppingCart = ShoppingCart{items, "0.0"}
+		}
+
+		bytes, err := json.Marshal(shoppingCart)
+		if err != nil {
+			http.Error(writer, "Failed to write response", 500)
+		}
+		writer.Header().Set("Content-Type", jsonContentType)
+		writer.WriteHeader(http.StatusOK)
+		writer.Write(bytes)
+
+	}
+
+}
+
+/* Offerings Handler */
 func (server *Server) offerings(writer http.ResponseWriter, request *http.Request) {
 	switch request.Method {
 
