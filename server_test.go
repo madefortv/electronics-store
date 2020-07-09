@@ -38,7 +38,6 @@ func TestShoppingCart(t *testing.T) {
 
 	// actual items
 	productService.repository.createOfferingsTable()
-	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 1, Active: true, ModifiedPrice: "NAN"})
 	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 3, Active: true, ModifiedPrice: "1000.00"})
 	productService.repository.insertOffering(Offering{ProductId: 1, DealId: 3, Active: true, ModifiedPrice: "1000.00"})
 	productService.repository.insertOffering(Offering{ProductId: 3, DealId: 2, Active: true, ModifiedPrice: "NAN"})
@@ -190,7 +189,7 @@ func TestShoppingCart(t *testing.T) {
 		assertShoppingCart(t, got, want)
 	})
 
-	t.Run("Add an item with coupon discount to cart", func(t *testing.T) {
+	t.Run("Add a bundle item to cart, there should be no effect", func(t *testing.T) {
 
 		body, _ := json.Marshal(Product{Id: 1})
 
@@ -201,6 +200,34 @@ func TestShoppingCart(t *testing.T) {
 			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
 			{Product{Id: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1},
 			{Product{Id: 1, Name: "laptop", Price: "1000.00", Description: "very fast"}, 1}}
+		want := ShoppingCart{Items: items, Total: "1140"}
+
+		var got ShoppingCart
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		err := json.NewDecoder(response.Body).Decode(&got)
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+		}
+
+		assertStatus(t, response.Code, http.StatusOK)
+
+		assertShoppingCart(t, got, want)
+	})
+
+	t.Run("Add the other bundled item to the cart", func(t *testing.T) {
+
+		body, _ := json.Marshal(Product{Id: 2})
+
+		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
+			{Product{Id: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1},
+			{Product{Id: 1, Name: "laptop", Price: "1000.00", Description: "very fast"}, 1},
+			{Product{Id: 2, Name: "mouse", Price: "10.00", Description: "much clicky"}, 1}}
 		want := ShoppingCart{Items: items, Total: "1140"}
 
 		var got ShoppingCart
