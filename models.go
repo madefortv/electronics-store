@@ -9,12 +9,12 @@ import (
 type DealType string
 
 const (
-	Retail       DealType = "Retail"
-	Flat                  = "Flat"
-	Percent               = "Percent"
-	Bundle                = "Bundle"
-	BuyXGetYFree          = "BuyXGetYFree"
-	Other                 = "Other"
+	Retail   DealType = "Retail"
+	Flat              = "Flat"
+	Percent           = "Percent"
+	Bundle            = "Bundle"
+	BuyXGetY          = "BuyXGetY"
+	Other             = "Other"
 )
 
 /*
@@ -152,10 +152,10 @@ func (repository *ProductRepository) createCartTable() {
 
 func (repository *ProductRepository) createProductsTable() {
 	createProductsTableSQL := `CREATE TABLE products (
-		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-		"price" VARCHAR(8) NOT NULL DEFAULT "NAN",
-		"name" VARCHAR(32) NOT NULL DEFAULT "EMPTY",
-		"description" TEXT
+		id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+		price VARCHAR(8) NOT NULL DEFAULT "NAN",
+		name VARCHAR(32) NOT NULL DEFAULT "EMPTY",
+		description TEXT
 	  );`
 
 	statement, err := repository.database.Prepare(createProductsTableSQL)

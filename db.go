@@ -53,8 +53,8 @@ func (repository *ProductRepository) getProductOfferings() []*ProductOffering {
 		)
 		rows.Scan(&pid, &did, &pname, &dname, &price, &quantity, &dtype, &coupon, &percent, &x, &y, &modified_price)
 
-		log.Printf("pid %d did %d pname %s dname %s dtype %s, price %s quantity %d x %d y %d coupon %s percent %s, modprice %s",
-			pid, did, pname, dname, dtype, price, quantity, x, y, coupon, percent, modified_price)
+		//log.Printf("pid %d did %d pname %s dname %s dtype %s, price %s quantity %d x %d y %d coupon %s percent %s, modprice %s",
+		//	pid, did, pname, dname, dtype, price, quantity, x, y, coupon, percent, modified_price)
 
 		productOfferings = append(productOfferings, &ProductOffering{
 			ProductId:     pid,

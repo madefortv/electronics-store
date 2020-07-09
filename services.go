@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/shopspring/decimal"
 	"log"
 )
 
@@ -27,18 +28,100 @@ func (service *ProductService) updateCart(item Item) error {
 	return service.repository.updateCart(item)
 }
 
-func (service *ProductService) calculateTotalPrice() string {
+func (service *ProductService) calculateTotalPrice() (string, error) {
 
 	productOfferings := service.repository.getProductOfferings()
 
-	for i := range productOfferings {
-		po := *productOfferings[i]
-		log.Printf("%v", po)
+	total, err := decimal.NewFromString("0")
+	if err != nil {
+		return "NAN", err
 	}
 
-	log.Printf("got %d", len(productOfferings))
+	for i := range productOfferings {
+		temp, err := decimal.NewFromString("0")
+		if err != nil {
+			return "NAN", err
+		}
 
-	return "100.00"
+		if err != nil {
+			return "NAN", err
+		}
+		//var n int // the number of an item to reduce
+		po := *productOfferings[i]
+		switch po.Type {
+
+		case "Bundle":
+			price, err := decimal.NewFromString(po.Price)
+			if err != nil {
+				return "NAN", err
+			}
+			bundlePrice, err := decimal.NewFromString(po.ModifiedPrice)
+			if err != nil {
+				return "NAN", err
+			}
+
+			//items := service.repository.listCart()
+			if price.LessThan(bundlePrice) {
+				// this isn't the big ticket item
+			}
+			temp = price
+			log.Printf("total: %s", temp.String())
+
+		case "BuyXGetY":
+
+			price, err := decimal.NewFromString(po.Price)
+			if err != nil {
+				return "NAN", err
+			}
+			// recurse over the number of items to calculate full price items
+			regularPriceItems := buyXGetYPrice(po.Quantity, po.X, po.Y)
+			quantity := decimal.NewFromInt(int64(regularPriceItems))
+			temp = price.Mul(quantity)
+			log.Printf("total: %s", temp.String())
+			//remove
+
+		case "Percent":
+
+			percent, err := decimal.NewFromString(po.Percent)
+			if err != nil {
+				return "NAN", err
+			}
+			price, err := decimal.NewFromString(po.Price)
+			if err != nil {
+				return "NAN", err
+			}
+			quantity := decimal.NewFromInt(int64(po.Quantity))
+			//Note: percent should be in the range (0, 1)
+			//TODO: add validation
+			temp = price.Mul(percent).Mul(quantity)
+			log.Printf("total: %s", temp.String())
+
+		case "Coupon":
+
+			price, err := decimal.NewFromString(po.Price)
+			if err != nil {
+				return "NAN", err
+			}
+			coupon, err := decimal.NewFromString(po.Coupon)
+			if err != nil {
+				return "NAN", err
+			}
+
+			temp = price.Sub(coupon)
+
+		default:
+			price, err := decimal.NewFromString(po.Price)
+			if err != nil {
+				return "NAN", err
+			}
+			temp = price
+
+		}
+
+		total = total.Add(temp)
+		log.Printf("total: %s", total.String())
+	}
+	return total.String(), nil
 }
 
 /* Products */

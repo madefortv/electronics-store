@@ -23,23 +23,27 @@ func TestShoppingCart(t *testing.T) {
 	// some deals to offer
 	productService.repository.createDealsTable()
 	productService.repository.insertDeal(Deal{Name: "Regular Price", Type: "Retail"})
-	productService.repository.insertDeal(Deal{Name: "Half Off", Type: "Percent", Percent: "50"})
+	productService.repository.insertDeal(Deal{Name: "Half Off", Type: "Percent", Percent: "0.5"})
 	productService.repository.insertDeal(Deal{Name: "Laptop Mouse Bundle", Type: "Bundle"})
-	productService.repository.insertDeal(Deal{Name: "Buy 3 USB get 1 free", Type: "BuyXGetYFree", X: 3, Y: 1})
+	productService.repository.insertDeal(Deal{Name: "Buy 3 Get 2 free", Type: "BuyXGetY", X: 3, Y: 2})
+	productService.repository.insertDeal(Deal{Name: "$10 keyboard", Type: "Coupon", Coupon: "10"})
 
 	// some products to list
 	productService.repository.createProductsTable()
 	productService.repository.insertProduct(Product{1, "laptop", "very fast", "1000.00"})
 	productService.repository.insertProduct(Product{2, "mouse", "much clicky", "10.00"})
 	productService.repository.insertProduct(Product{3, "monitor", "four kay", "100.00"})
-	productService.repository.insertProduct(Product{4, "usb", "type see", "1.00"})
+	productService.repository.insertProduct(Product{4, "usb", "type see", "5.00"})
+	productService.repository.insertProduct(Product{5, "keyboard", "mecha", "25.00"})
 
 	// actual items
 	productService.repository.createOfferingsTable()
-	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 1, Active: true})
+	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 1, Active: true, ModifiedPrice: "NAN"})
 	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 3, Active: true, ModifiedPrice: "1000.00"})
 	productService.repository.insertOffering(Offering{ProductId: 1, DealId: 3, Active: true, ModifiedPrice: "1000.00"})
-	productService.repository.insertOffering(Offering{ProductId: 3, DealId: 2, Active: true})
+	productService.repository.insertOffering(Offering{ProductId: 3, DealId: 2, Active: true, ModifiedPrice: "NAN"})
+	productService.repository.insertOffering(Offering{ProductId: 4, DealId: 4, Active: true})
+	productService.repository.insertOffering(Offering{ProductId: 5, DealId: 5, Active: true})
 
 	t.Run("get empty cart", func(t *testing.T) {
 
@@ -70,7 +74,7 @@ func TestShoppingCart(t *testing.T) {
 		req.Header.Set("Content-Type", jsonContentType)
 
 		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 1}}
-		want := ShoppingCart{Items: items, Total: "100.00"}
+		want := ShoppingCart{Items: items, Total: "50"}
 
 		var got ShoppingCart
 		response := httptest.NewRecorder()
@@ -89,13 +93,13 @@ func TestShoppingCart(t *testing.T) {
 
 	t.Run("Modify the quantity of a certain product", func(t *testing.T) {
 
-		body, _ := json.Marshal(Item{Product{3, "monitor", "four kay", "100.00"}, 2})
+		body, _ := json.Marshal(Item{Product{3, "laptop", "very fast", "1000.00"}, 2})
 
 		req, _ := http.NewRequest(http.MethodPut, "/cart", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", jsonContentType)
 
 		items := []Item{{Product{3, "monitor", "four kay", "100.00"}, 2}}
-		want := ShoppingCart{Items: items, Total: "200.00"}
+		want := ShoppingCart{Items: items, Total: "100"}
 
 		var got ShoppingCart
 		response := httptest.NewRecorder()
@@ -107,6 +111,109 @@ func TestShoppingCart(t *testing.T) {
 		}
 
 		assertStatus(t, response.Code, http.StatusOK)
+		assertShoppingCart(t, got, want)
+	})
+
+	t.Run("Add an X of Y item to cart that doesn't meet threshold", func(t *testing.T) {
+
+		body, _ := json.Marshal(Product{Id: 4})
+
+		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 1}}
+		want := ShoppingCart{Items: items, Total: "105"}
+
+		var got ShoppingCart
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		err := json.NewDecoder(response.Body).Decode(&got)
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+		}
+
+		assertStatus(t, response.Code, http.StatusOK)
+
+		assertShoppingCart(t, got, want)
+
+	})
+
+	t.Run(" Trigger a buy x get y discount ", func(t *testing.T) {
+
+		body, _ := json.Marshal(Item{Product{4, "useb", "type see", "5.00"}, 7})
+
+		req, _ := http.NewRequest(http.MethodPut, "/cart", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7}}
+
+		want := ShoppingCart{Items: items, Total: "125"}
+		var got ShoppingCart
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		err := json.NewDecoder(response.Body).Decode(&got)
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+		}
+
+		assertStatus(t, response.Code, http.StatusOK)
+		assertShoppingCart(t, got, want)
+	})
+
+	t.Run("Add an item with coupon discount to cart", func(t *testing.T) {
+
+		body, _ := json.Marshal(Product{Id: 5})
+
+		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
+			{Product{Id: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1}}
+		want := ShoppingCart{Items: items, Total: "140"}
+
+		var got ShoppingCart
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		err := json.NewDecoder(response.Body).Decode(&got)
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+		}
+
+		assertStatus(t, response.Code, http.StatusOK)
+
+		assertShoppingCart(t, got, want)
+	})
+
+	t.Run("Add an item with coupon discount to cart", func(t *testing.T) {
+
+		body, _ := json.Marshal(Product{Id: 1})
+
+		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
+			{Product{Id: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1},
+			{Product{Id: 1, Name: "laptop", Price: "1000.00", Description: "very fast"}, 1}}
+		want := ShoppingCart{Items: items, Total: "1140"}
+
+		var got ShoppingCart
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		err := json.NewDecoder(response.Body).Decode(&got)
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+		}
+
+		assertStatus(t, response.Code, http.StatusOK)
+
 		assertShoppingCart(t, got, want)
 	})
 

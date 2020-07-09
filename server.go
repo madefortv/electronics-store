@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	//"github.com/shopspring/decimal"
 	"net/http"
 )
 
@@ -68,7 +67,10 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 		if len(items) == 0 {
 			shoppingCart = ShoppingCart{}
 		} else {
-			total := server.productService.calculateTotalPrice()
+			total, err := server.productService.calculateTotalPrice()
+			if err != nil {
+				http.Error(writer, "Error calculating total", 500)
+			}
 			shoppingCart = ShoppingCart{items, total}
 		}
 
@@ -76,13 +78,7 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", jsonContentType)
 		writer.WriteHeader(http.StatusOK)
 		writer.Write(bytes)
-		/*
-			total, err := decimal.NewFromString(shoppingCart.Total)
-			if err != nil {
-				shoppingCart.Total = "0.0"
-			}
-			if total.IsZero()
-		*/
+
 	case http.MethodPut:
 		var shoppingCart ShoppingCart
 		var item Item
@@ -101,7 +97,10 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 		if len(items) == 0 {
 			shoppingCart = ShoppingCart{}
 		} else {
-			total := server.productService.calculateTotalPrice()
+			total, err := server.productService.calculateTotalPrice()
+			if err != nil {
+				http.Error(writer, "Error calculating total", 500)
+			}
 			shoppingCart = ShoppingCart{items, total}
 		}
 
