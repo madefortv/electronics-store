@@ -75,6 +75,10 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		bytes, err := json.Marshal(shoppingCart)
+		if err != nil {
+			http.Error(writer, "Failed to write a response", 500)
+		}
+
 		writer.Header().Set("Content-Type", jsonContentType)
 		writer.WriteHeader(http.StatusOK)
 		writer.Write(bytes)
@@ -137,19 +141,6 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 /* Offerings Handler */
 func (server *Server) offerings(writer http.ResponseWriter, request *http.Request) {
 	switch request.Method {
-
-	/*
-		case http.MethodGet:
-
-			deals := server.productService.listOfferings()
-			bytes, err := json.Marshal(deals)
-			if err != nil {
-				http.Error(writer, "Bad Request", 400)
-			}
-			writer.Header().Set("Content-Type", jsonContentType)
-			writer.WriteHeader(http.StatusOK)
-			writer.Write(bytes)
-	*/
 
 	case http.MethodPost:
 

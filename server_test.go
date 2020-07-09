@@ -507,20 +507,6 @@ func assertResponseBody(t *testing.T, got, want string) {
 	}
 }
 
-func assertProductCode(t *testing.T, got, want ProductCode) {
-	t.Helper()
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v want %v", got, want)
-	}
-}
-
-func assertProduct(t *testing.T, got, want Product) {
-	t.Helper()
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v want %v", got, want)
-	}
-}
-
 func assertProducts(t *testing.T, got, want []Product) {
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {

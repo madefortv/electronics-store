@@ -1,23 +1,8 @@
 package main
 
 import (
-	"log"
-
 	"github.com/shopspring/decimal"
-	"reflect"
 )
-
-func itemIndexByProduct(items []Item, product Product) int {
-
-	log.Printf("comparing %v and %v", items, product)
-	for i := range items {
-		// might need deep reflect
-		if reflect.DeepEqual(&items[i].Product, &product) {
-			return i
-		}
-	}
-	return -1
-}
 
 func fitlerOfferByDealType(productOfferings []*ProductOffering, dtype DealType) []*ProductOffering {
 
@@ -26,19 +11,6 @@ func fitlerOfferByDealType(productOfferings []*ProductOffering, dtype DealType) 
 		po := *productOfferings[i]
 		// might need deep reflect
 		if po.Type == dtype {
-			offers = append(offers, &po)
-		}
-	}
-	return offers
-}
-
-func filterOfferByDealId(productOfferings []*ProductOffering, dealId int) []*ProductOffering {
-
-	var offers []*ProductOffering
-	for i := range productOfferings {
-		po := *productOfferings[i]
-		// might need deep reflect
-		if po.DealId == dealId {
 			offers = append(offers, &po)
 		}
 	}
@@ -109,8 +81,6 @@ func totalPrice(productOfferings []*ProductOffering) (string, error) {
 			regularPriceItems := buyXGetYPrice(po.Quantity, po.X, po.Y)
 			quantity := decimal.NewFromInt(int64(regularPriceItems))
 			temp = price.Mul(quantity)
-			log.Printf("total: %s", temp.String())
-			//remove
 
 		case "Percent":
 
@@ -131,7 +101,6 @@ func totalPrice(productOfferings []*ProductOffering) (string, error) {
 			if err != nil {
 				return "NAN", err
 			}
-			// should be in range (0,1)
 			coupon, err := decimal.NewFromString(po.Coupon)
 			if err != nil {
 				return "NAN", err

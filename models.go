@@ -81,8 +81,7 @@ type Deal struct {
    @Id is the primary key of this, although ProductId/DealId would work
    @ProductId is a product associated with this
    @DealId deal that modifies the product(s)
-   @ModifiedPrice is the final price of an offering after being modified by
-   a deal
+   @ModifiedPrice is the Bundle Price
    @Active flag determines whether this deal is active
 */
 

@@ -5,34 +5,20 @@ import (
 	"log"
 )
 
-/* Get all the relevant deals  and offerings */
+/* Get all the relevant deals and offerings that are also in the cart*/
 func (repository *ProductRepository) getProductOfferings() []*ProductOffering {
-
-	/*
-		rows, _ := repository.database.Query(`SELECT
-		PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, modified_price
-		    FROM
-		    (
-			SELECT products.id AS PID,
-			products.name AS PNAME,
-			products.price,
-			deals.id AS DID,
-			deals.name AS DNAME,
-			deals.type,
-			deals.x,
-			deals.y,
-			deals.coupon,
-			deals.percent,
-			offerings.modified_price
-			    FROM offerings
-				INNER JOIN products ON products.id = offerings.product_id
-				INNER JOIN deals on deals.id = offerings.deal_id
-				WHERE active = 1
-		    )
-		    INNER JOIN cart on cart.product_id = pid WHERE cart.quantity > 0;`)
-	*/
-
-	rows, _ := repository.database.Query(`SELECT PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, modified_price  FROM (SELECT products.id AS PID, products.name AS PNAME, products.price, deals.id AS DID, deals.name AS DNAME, deals.type, deals.x, deals.y, deals.coupon, deals.percent, offerings.modified_price FROM offerings INNER JOIN products on products.id = offerings.product_id INNER JOIN deals on deals.id = offerings.deal_id WHERE active = 1) INNER JOIN cart on cart.product_id = pid WHERE cart.quantity > 0;`)
+	rows, _ := repository.database.Query(`
+	    SELECT PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, modified_price
+	    FROM (
+		SELECT products.id AS PID, products.name AS PNAME,
+		products.price, deals.id AS DID, deals.name AS DNAME,
+		deals.type, deals.x, deals.y, deals.coupon, deals.percent,
+		offerings.modified_price
+		   FROM offerings
+		   INNER JOIN products on products.id = offerings.product_id
+		   INNER JOIN deals on deals.id = offerings.deal_id
+		   WHERE active = 1
+	       ) INNER JOIN cart on cart.product_id = pid WHERE cart.quantity > 0;`)
 	defer rows.Close()
 
 	var productOfferings []*ProductOffering
@@ -51,10 +37,10 @@ func (repository *ProductRepository) getProductOfferings() []*ProductOffering {
 			y              int
 			modified_price string
 		)
-		rows.Scan(&pid, &did, &pname, &dname, &price, &quantity, &dtype, &coupon, &percent, &x, &y, &modified_price)
-
-		//log.Printf("pid %d did %d pname %s dname %s dtype %s, price %s quantity %d x %d y %d coupon %s percent %s, modprice %s",
-		//	pid, did, pname, dname, dtype, price, quantity, x, y, coupon, percent, modified_price)
+		err := rows.Scan(&pid, &did, &pname, &dname, &price, &quantity, &dtype, &coupon, &percent, &x, &y, &modified_price)
+		if err != nil {
+			log.Fatalf("DB Scan error %v", err.Error())
+		}
 
 		productOfferings = append(productOfferings, &ProductOffering{
 			ProductId:     pid,
@@ -71,20 +57,19 @@ func (repository *ProductRepository) getProductOfferings() []*ProductOffering {
 			ModifiedPrice: modified_price,
 		})
 
-		// for each pid and quantity in results, check for bundles, buyxgety, percent, coupon, retail
 	}
 	return productOfferings
 
 }
 
 func (repository *ProductRepository) listCart() []Item {
-	rows, _ := repository.database.Query(`SELECT 
-		products.id, 
+	rows, _ := repository.database.Query(`SELECT
+		products.id,
 		products.name,
 		products.description,
 		products.price,
-		cart.quantity 
-		FROM cart INNER JOIN 
+		cart.quantity
+		FROM cart INNER JOIN
 		products ON products.id = cart.product_id;`)
 
 	defer rows.Close()
@@ -100,7 +85,10 @@ func (repository *ProductRepository) listCart() []Item {
 			quantity    int
 		)
 
-		rows.Scan(&id, &name, &description, &price, &quantity)
+		err := rows.Scan(&id, &name, &description, &price, &quantity)
+		if err != nil {
+			log.Fatalf("DB Scan error %v", err.Error())
+		}
 
 		items = append(items, Item{
 			Product{
