@@ -85,8 +85,6 @@ func (service *ProductService) totalPrice(productOfferings []*ProductOffering) (
 	/* A map of deals to cart items that match those deals, used to calculate bundle prices */
 	bundledItems := make(map[int][]*ProductOffering)
 	/* a bit hacky, but this map tracks the count of each product in a bundle*/
-	bundledProductCount := make(map[int]int)
-	/* a map of deal_id to cart items */
 	for i := range productOfferings {
 		temp, err := decimal.NewFromString("0")
 		if err != nil {
@@ -99,8 +97,6 @@ func (service *ProductService) totalPrice(productOfferings []*ProductOffering) (
 			// we don't decided on a final price until we finish looping over all the products
 			// so we add the each item in the cart to a list associated with the bundle it's in.
 			bundledItems[po.DealID] = append(bundledItems[po.DealID], &po)
-			// we also track the quantity of each product so we can calculate a price for multiple products
-			bundledProductCount[po.ProductID] = po.Quantity
 		case "BuyXGetY":
 
 			price, err := decimal.NewFromString(po.Price)
@@ -151,6 +147,8 @@ func (service *ProductService) totalPrice(productOfferings []*ProductOffering) (
 
 		total = total.Add(temp)
 	}
+
+	// calcualte the bundle price at the end and tac it on
 	bundledTotal, err := service.bundlePrice(bundledItems)
 	if err != nil {
 		return "NAN", err

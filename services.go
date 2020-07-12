@@ -26,6 +26,10 @@ func (service *ProductService) updateCart(item Item) error {
 	return service.repository.updateCart(item)
 }
 
+func (service *ProductService) removeFromCart(product Product) error {
+	return service.repository.removeFromCart(product)
+}
+
 func (service *ProductService) calculateTotalPrice() (string, error) {
 
 	productOfferings := service.repository.getProductOfferings()

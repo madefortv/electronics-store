@@ -7,6 +7,20 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+/*
+   The Product model represents an item or bundle component. These are atomic.
+*/
+
+type Product struct {
+	ID          int    `json:"id,omitempty"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Price       string `json:"price"`
+}
+
+/*
+   Enum for deal type
+*/
 type DealType string
 
 const (
@@ -19,25 +33,9 @@ const (
 )
 
 /*
-   The Product model represents an item in stock or was in
-   stock historically. Price is not the final price, but rather
-   the set price at the time
-   @Id the products primary key
-   @Name product name
-   @Description of the product
-   @Price the retail price of an item
-*/
+   A deal struct holds data about the discounts applied to certain products
+   they have different types and fields depending on the type
 
-type Product struct {
-	ID          int    `json:"id,omitempty"`
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Price       string `json:"price"`
-}
-
-/*
-   The deal struct is where we keep our data that drives the logic behind
-   different types of offerings like bundles, or
    @Id is the deal id
    @Name refers to the bundle name
    @Type referes to the type of deal
@@ -61,7 +59,7 @@ type Deal struct {
 }
 
 /* The offering model is a relationship between one or more products and
-   zero or more deals. By default a product for sale is an offering with
+   a deal. By default a product for sale is an offering with
    "retail" type deal modifying it.
 
    An Offering has Products and is modified by Deals. Users add Product Offerings
@@ -69,7 +67,8 @@ type Deal struct {
 
    ProductId, DealId -> primary key
    Each deal has a type and that type will influece the control flow for
-   calculating the final price of a set of tiems.
+   calculating the final price of a set of tiems. See utils.go
+
    @Id is the primary key of this, although ProductId/DealId would work
    @ProductId is a product associated with this
    @DealId deal that modifies the product(s)
@@ -85,7 +84,10 @@ type Offering struct {
 	Active        bool   `json:"active,omitempty"`
 }
 
-/* After a join of offerings x products x deals, we get a product offering */
+/*
+   A helpful struct for unzipping joins into.
+   After a join of offerings x products x deals, we get a product offering
+*/
 type ProductOffering struct {
 	ProductID     int      `json:"product_id,omitempty"`
 	DealID        int      `json:"deal_id,omitempty"`
@@ -113,6 +115,8 @@ type Item struct {
 	Quantity int     `json:"quantity"`
 }
 
+/* Database service */
+
 func NewProductRepository(database *sql.DB) *ProductRepository {
 	return &ProductRepository{database: database}
 }
@@ -125,6 +129,7 @@ func ConnectDatabase(config *Config) (*sql.DB, error) {
 	return sql.Open("sqlite3", config.DatabasePath)
 }
 
+/* Helpers */
 func (repository *ProductRepository) createCartTable() {
 	createProductsTableSQL := `CREATE TABLE cart (
 		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,

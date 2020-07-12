@@ -41,8 +41,8 @@ func TestShoppingCart(t *testing.T) {
 	productService.repository.insertOffering(Offering{ProductID: 2, DealID: 3, Active: true, ModifiedPrice: "1000.00"})
 	productService.repository.insertOffering(Offering{ProductID: 1, DealID: 3, Active: true, ModifiedPrice: "1000.00"})
 	productService.repository.insertOffering(Offering{ProductID: 3, DealID: 2, Active: true, ModifiedPrice: "NAN"})
-	productService.repository.insertOffering(Offering{ProductID: 4, DealID: 4, Active: true})
-	productService.repository.insertOffering(Offering{ProductID: 5, DealID: 5, Active: true})
+	productService.repository.insertOffering(Offering{ProductID: 4, DealID: 4, Active: true, ModifiedPrice: "NAN"})
+	productService.repository.insertOffering(Offering{ProductID: 5, DealID: 5, Active: true, ModifiedPrice: "NAN"})
 
 	t.Run("get empty cart", func(t *testing.T) {
 
@@ -244,6 +244,33 @@ func TestShoppingCart(t *testing.T) {
 		assertShoppingCart(t, got, want)
 	})
 
+	t.Run("Delete an item from cart", func(t *testing.T) {
+
+		body, _ := json.Marshal(Product{ID: 3})
+
+		req, _ := http.NewRequest(http.MethodDelete, "/cart", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", jsonContentType)
+
+		items := []Item{{Product{ID: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
+			{Product{ID: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1},
+			{Product{ID: 1, Name: "laptop", Price: "1000.00", Description: "very fast"}, 1},
+			{Product{ID: 2, Name: "mouse", Price: "10.00", Description: "much clicky"}, 1}}
+		want := ShoppingCart{Items: items, Total: "1040"}
+
+		var got ShoppingCart
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, req)
+
+		err := json.NewDecoder(response.Body).Decode(&got)
+		if err != nil {
+			t.Fatalf("Unable to parse response from server %q into slice of Product, '%v'", response.Body, err)
+		}
+
+		assertStatus(t, response.Code, http.StatusOK)
+
+		assertShoppingCart(t, got, want)
+	})
+
 }
 
 func TestOfferings(t *testing.T) {
@@ -293,13 +320,6 @@ func TestOfferings(t *testing.T) {
 		assertResponseBody(t, got, want)
 	})
 
-	// Get all active offers associated with a specific product and all other products associated with that offer/deal
-	/*
-	   SELECT products.name, products.price, deals.name, deals.type FROM offerings WHERE active = 1 INNER JOIN products on products.id = offerings.product_id INNER JOIN deals on deals.id = offerings.deal_id;
-
-	   TODO: restrict to a specific product/deal?
-	*/
-
 }
 
 func TestDeals(t *testing.T) {
@@ -314,8 +334,6 @@ func TestDeals(t *testing.T) {
 
 	productService.repository.insertDeal(Deal{Name: "Regular Price", Type: "Retail"})
 	productService.repository.insertDeal(Deal{Name: "Half Off", Type: "Percent", Percent: "50"})
-	//productService.repository.insertDeal(Deal{Name: "Buy One Get One Free", Type: "BuyXGetYFree", X: 1, Y: 1})
-	//productService.repository.insertDeal(Deal{Name: "Get a Mouse free with any Laptop", Type: "Bundle"})
 
 	t.Run("get the list of deals", func(t *testing.T) {
 

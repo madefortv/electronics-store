@@ -32,14 +32,17 @@ go test
 - models.go hosts the datamodels and table building functions
 - db.go is where the sql queries live
 - config.go is the server/db config file
-- server_test.go is the test file
+- utils.go has some functions for calculating final price and other helpers
+- server_test.go blackbox tests the API
 
 # Assumptions
-Products can only have one deal applied to them at any given time. Calculating Attribution is hard and costs extra.
+Products can only have one deal applied to them at any given time.
+Bundles do not "auto fill" in the other products from its bundle, they must be added one by one.
+Bundles only have one level, you there are no "bundles of bundles"
 
 # Approach
 a vanilla Go web applcation minus the sqlite and decimal packages for money safety.
-Utilize SQL to buld 4 tables, products, deals, offerings, and cart
+Utilize SQLite to buld 4 tables, products, deals, offerings, and cart
 
 Abstractly:
 
@@ -53,10 +56,14 @@ A cart contains just products and quantities. I didn't want to mess around with 
 
 
 
-# Drawbacks/Learnings
+# Drawbacks/Learnings/Enhancements
+Calculating Attribution for multiple bundles can be very complex. This can be observed in online marketplaces and advertisers like facebook and google.
+The data structure portion of this problem is related to network and trees. Classical relational database problems like "product explosion" and "Bill of Materials"
 
-Attribution is hard, and working with multiple deals on a single product and minimzing the amount can be complex.
+Attribution is hard, and working with multiple deals on a single product and minimzing the amount can be complex, recursive and is a well documented problem.
+
 Bundles should be moved to a seperate relationship and have a BundleID/Group to make determining if all the bundled items
 are in the cart more simple.
 
+Adding a "quantity" field to the offerings table would allow us to compose bundles with more than one item "1 cpu, 2 monitors, 1 keyboard, 1 mouse, 2 usb"
 

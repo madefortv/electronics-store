@@ -142,12 +142,12 @@ func (repository *ProductRepository) updateCart(item Item) error {
 	return err
 }
 
-func (repository *ProductRepository) deleteCart(item Item) error {
+func (repository *ProductRepository) removeFromCart(product Product) error {
 	tx, _ := repository.database.Begin()
 
 	stmt, _ := tx.Prepare(`DELETE FROM cart WHERE product_id = ?`)
 	defer stmt.Close()
-	_, err := stmt.Exec(item.Quantity, item.Product.ID)
+	_, err := stmt.Exec(product.ID)
 	if err != nil {
 		err = tx.Rollback()
 		log.Fatalf("Statement error %v", err.Error())

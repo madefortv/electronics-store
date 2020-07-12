@@ -123,6 +123,43 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 			http.Error(writer, "Failed to write response", 500)
 		}
 
+	case http.MethodDelete:
+
+		var shoppingCart ShoppingCart
+		var product Product
+		err := json.NewDecoder(request.Body).Decode(&product)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+
+		err = server.productService.removeFromCart(product)
+		if err != nil {
+			http.Error(writer, "Failed to update cart", 500)
+		}
+
+		items := server.productService.listCartItems()
+
+		if len(items) == 0 {
+			shoppingCart = ShoppingCart{}
+		} else {
+			total, err := server.productService.calculateTotalPrice()
+			if err != nil {
+				http.Error(writer, "Error calculating total", 500)
+			}
+			shoppingCart = ShoppingCart{items, total}
+		}
+
+		bytes, err := json.Marshal(shoppingCart)
+		if err != nil {
+			http.Error(writer, "Failed to write response", 500)
+		}
+		writer.Header().Set("Content-Type", jsonContentType)
+		writer.WriteHeader(http.StatusOK)
+		_, err = writer.Write(bytes)
+		if err != nil {
+			http.Error(writer, "Failed to write response", 500)
+		}
+
 	case http.MethodGet:
 
 		items := server.productService.listCartItems()
