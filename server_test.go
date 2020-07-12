@@ -38,11 +38,11 @@ func TestShoppingCart(t *testing.T) {
 
 	// actual items
 	productService.repository.createOfferingsTable()
-	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 3, Active: true, ModifiedPrice: "1000.00"})
-	productService.repository.insertOffering(Offering{ProductId: 1, DealId: 3, Active: true, ModifiedPrice: "1000.00"})
-	productService.repository.insertOffering(Offering{ProductId: 3, DealId: 2, Active: true, ModifiedPrice: "NAN"})
-	productService.repository.insertOffering(Offering{ProductId: 4, DealId: 4, Active: true})
-	productService.repository.insertOffering(Offering{ProductId: 5, DealId: 5, Active: true})
+	productService.repository.insertOffering(Offering{ProductID: 2, DealID: 3, Active: true, ModifiedPrice: "1000.00"})
+	productService.repository.insertOffering(Offering{ProductID: 1, DealID: 3, Active: true, ModifiedPrice: "1000.00"})
+	productService.repository.insertOffering(Offering{ProductID: 3, DealID: 2, Active: true, ModifiedPrice: "NAN"})
+	productService.repository.insertOffering(Offering{ProductID: 4, DealID: 4, Active: true})
+	productService.repository.insertOffering(Offering{ProductID: 5, DealID: 5, Active: true})
 
 	t.Run("get empty cart", func(t *testing.T) {
 
@@ -67,12 +67,12 @@ func TestShoppingCart(t *testing.T) {
 
 	t.Run("Add an item to a shopping cart", func(t *testing.T) {
 
-		body, _ := json.Marshal(Product{Id: 3, Name: "monitor", Description: "four kay", Price: "100.00"})
+		body, _ := json.Marshal(Product{ID: 3, Name: "monitor", Description: "four kay", Price: "100.00"})
 
 		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", jsonContentType)
 
-		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 1}}
+		items := []Item{{Product{ID: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 1}}
 		want := ShoppingCart{Items: items, Total: "50"}
 
 		var got ShoppingCart
@@ -115,13 +115,13 @@ func TestShoppingCart(t *testing.T) {
 
 	t.Run("Add an X of Y item to cart that doesn't meet threshold", func(t *testing.T) {
 
-		body, _ := json.Marshal(Product{Id: 4})
+		body, _ := json.Marshal(Product{ID: 4})
 
 		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", jsonContentType)
 
-		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
-			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 1}}
+		items := []Item{{Product{ID: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{ID: 4, Name: "usb", Price: "5.00", Description: "type see"}, 1}}
 		want := ShoppingCart{Items: items, Total: "105"}
 
 		var got ShoppingCart
@@ -146,8 +146,8 @@ func TestShoppingCart(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodPut, "/cart", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", jsonContentType)
 
-		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
-			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7}}
+		items := []Item{{Product{ID: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{ID: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7}}
 
 		want := ShoppingCart{Items: items, Total: "125"}
 		var got ShoppingCart
@@ -165,14 +165,14 @@ func TestShoppingCart(t *testing.T) {
 
 	t.Run("Add an item with coupon discount to cart", func(t *testing.T) {
 
-		body, _ := json.Marshal(Product{Id: 5})
+		body, _ := json.Marshal(Product{ID: 5})
 
 		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", jsonContentType)
 
-		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
-			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
-			{Product{Id: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1}}
+		items := []Item{{Product{ID: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{ID: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
+			{Product{ID: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1}}
 		want := ShoppingCart{Items: items, Total: "140"}
 
 		var got ShoppingCart
@@ -191,15 +191,15 @@ func TestShoppingCart(t *testing.T) {
 
 	t.Run("Add a bundle item to cart, there should be no effect", func(t *testing.T) {
 
-		body, _ := json.Marshal(Product{Id: 1})
+		body, _ := json.Marshal(Product{ID: 1})
 
 		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", jsonContentType)
 
-		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
-			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
-			{Product{Id: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1},
-			{Product{Id: 1, Name: "laptop", Price: "1000.00", Description: "very fast"}, 1}}
+		items := []Item{{Product{ID: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{ID: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
+			{Product{ID: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1},
+			{Product{ID: 1, Name: "laptop", Price: "1000.00", Description: "very fast"}, 1}}
 		want := ShoppingCart{Items: items, Total: "1140"}
 
 		var got ShoppingCart
@@ -218,16 +218,16 @@ func TestShoppingCart(t *testing.T) {
 
 	t.Run("Add the other bundled item to the cart", func(t *testing.T) {
 
-		body, _ := json.Marshal(Product{Id: 2})
+		body, _ := json.Marshal(Product{ID: 2})
 
 		req, _ := http.NewRequest(http.MethodPost, "/cart", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", jsonContentType)
 
-		items := []Item{{Product{Id: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
-			{Product{Id: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
-			{Product{Id: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1},
-			{Product{Id: 1, Name: "laptop", Price: "1000.00", Description: "very fast"}, 1},
-			{Product{Id: 2, Name: "mouse", Price: "10.00", Description: "much clicky"}, 1}}
+		items := []Item{{Product{ID: 3, Name: "monitor", Price: "100.00", Description: "four kay"}, 2},
+			{Product{ID: 4, Name: "usb", Price: "5.00", Description: "type see"}, 7},
+			{Product{ID: 5, Name: "keyboard", Price: "25.00", Description: "mecha"}, 1},
+			{Product{ID: 1, Name: "laptop", Price: "1000.00", Description: "very fast"}, 1},
+			{Product{ID: 2, Name: "mouse", Price: "10.00", Description: "much clicky"}, 1}}
 		want := ShoppingCart{Items: items, Total: "1140"}
 
 		var got ShoppingCart
@@ -270,16 +270,16 @@ func TestOfferings(t *testing.T) {
 	// actual items
 	productService.repository.createOfferingsTable()
 	// regular priced mouse
-	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 1})
+	productService.repository.insertOffering(Offering{ProductID: 2, DealID: 1})
 	// laptop with a mouse free
-	productService.repository.insertOffering(Offering{ProductId: 2, DealId: 3})
-	productService.repository.insertOffering(Offering{ProductId: 1, DealId: 3})
+	productService.repository.insertOffering(Offering{ProductID: 2, DealID: 3})
+	productService.repository.insertOffering(Offering{ProductID: 1, DealID: 3})
 	// 50% off monitors
-	productService.repository.insertOffering(Offering{ProductId: 3, DealId: 2})
+	productService.repository.insertOffering(Offering{ProductID: 3, DealID: 2})
 
 	t.Run("create new offering connecting usbs to the buy 3 USBs get 1 free offering", func(t *testing.T) {
 
-		body, _ := json.Marshal(Offering{ProductId: 4, DealId: 4})
+		body, _ := json.Marshal(Offering{ProductID: 4, DealID: 4})
 		req, _ := http.NewRequest(http.MethodPost, "/offerings", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", jsonContentType)
 
@@ -320,7 +320,7 @@ func TestDeals(t *testing.T) {
 	t.Run("get the list of deals", func(t *testing.T) {
 
 		request, _ := http.NewRequest(http.MethodGet, "/deals", nil)
-		want := []Deal{{Id: 1, Name: "Regular Price", Type: "Retail"}, {Id: 2, Name: "Half Off", Type: "Percent", Percent: "50"}}
+		want := []Deal{{ID: 1, Name: "Regular Price", Type: "Retail"}, {ID: 2, Name: "Half Off", Type: "Percent", Percent: "50"}}
 
 		response := httptest.NewRecorder()
 		server.Handler().ServeHTTP(response, request)
@@ -382,7 +382,7 @@ func TestProducts(t *testing.T) {
 
 	t.Run("inserts a new product", func(t *testing.T) {
 
-		request := newCreateProductRequest(0, "monitor", "fourkay", "100.00")
+		request := newProductRequest(http.MethodPost, 0, "monitor", "fourkay", "100.00")
 		want := ""
 		var got string
 		response := httptest.NewRecorder()
@@ -396,7 +396,7 @@ func TestProducts(t *testing.T) {
 
 	t.Run("update a product name and description", func(t *testing.T) {
 
-		request := newUpdateProductRequest(1, "laptop", "older", "85.00")
+		request := newProductRequest(http.MethodPut, 1, "laptop", "older", "85.00")
 		want := ""
 
 		response := httptest.NewRecorder()
@@ -410,7 +410,7 @@ func TestProducts(t *testing.T) {
 	})
 
 	t.Run("delete the a product (id = 2)", func(t *testing.T) {
-		request := newDeleteProductRequest(2)
+		request := newProductRequest(http.MethodDelete, 2, "monitor", "fourkay", "100.00")
 		want := ""
 
 		response := httptest.NewRecorder()
@@ -459,20 +459,7 @@ func setupTestDatabase(config *Config) (repository *ProductRepository) {
 	return repository
 }
 
-func newCreateProductRequest(id int, name, description, price string) *http.Request {
-	product := Product{
-		0,
-		name,
-		description,
-		price,
-	}
-	body, _ := json.Marshal(product)
-	req, _ := http.NewRequest(http.MethodPost, "/products/create", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", jsonContentType)
-	return req
-}
-
-func newUpdateProductRequest(id int, name, description, price string) *http.Request {
+func newProductRequest(method string, id int, name, description, price string) *http.Request {
 	product := Product{
 		id,
 		name,
@@ -480,15 +467,7 @@ func newUpdateProductRequest(id int, name, description, price string) *http.Requ
 		price,
 	}
 	body, _ := json.Marshal(product)
-	req, _ := http.NewRequest(http.MethodPost, "/products/update", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", jsonContentType)
-	return req
-}
-
-func newDeleteProductRequest(id int64) *http.Request {
-	code := ProductCode{id}
-	body, _ := json.Marshal(code)
-	req, _ := http.NewRequest(http.MethodPost, "/products/delete", bytes.NewBuffer(body))
+	req, _ := http.NewRequest(method, "/products", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", jsonContentType)
 	return req
 }

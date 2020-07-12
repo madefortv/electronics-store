@@ -29,7 +29,7 @@ func (service *ProductService) updateCart(item Item) error {
 func (service *ProductService) calculateTotalPrice() (string, error) {
 
 	productOfferings := service.repository.getProductOfferings()
-	total, err := totalPrice(productOfferings)
+	total, err := service.totalPrice(productOfferings)
 	if err != nil {
 		return "NAN", err
 	}
@@ -72,9 +72,9 @@ func (service *ProductService) updateProduct(product Product) error {
 	return errors.New("Operation Not Permitted")
 }
 
-func (service *ProductService) deleteProduct(code ProductCode) error {
+func (service *ProductService) deleteProduct(product Product) error {
 	if service.config.Enabled {
-		return service.repository.deleteProduct(code)
+		return service.repository.deleteProduct(product)
 	}
 	return errors.New("Operation Not Permitted")
 }

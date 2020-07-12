@@ -17,7 +17,7 @@ func fitlerOfferByDealType(productOfferings []*ProductOffering, dtype DealType) 
 	return offers
 }
 
-// returns the # of regular price items
+// use recursion to calculate the # of regular price items the charge for.
 func buyXGetYPrice(quantity int, x int, y int) int {
 	z := x + y
 	// just in case
@@ -36,41 +36,71 @@ func buyXGetYPrice(quantity int, x int, y int) int {
 	return x + buyXGetYPrice(quantity-z, x, y)
 }
 
-func totalPrice(productOfferings []*ProductOffering) (string, error) {
+// Takes a map [DealID] -> ProductOffering{} to determine
+func (service *ProductService) bundlePrice(bundledItems map[int][]*ProductOffering) (decimal.Decimal, error) {
+	bundleTotal, err := decimal.NewFromString("0")
+	if err != nil {
+		return decimal.Decimal{}, err
+	}
+	// for each unique bundle in the cart
+	for k, v := range bundledItems {
+		// get all the items in that bundle
+		offerings := service.repository.getBundleComponents(k)
+		// start a subtotal for that bundle
+		subtotal, err := decimal.NewFromString("0")
+		if err != nil {
+			return decimal.Decimal{}, err
+		}
+		for i := range v {
+			if len(offerings) == len(bundledItems[k]) {
+				price, err := decimal.NewFromString(v[i].ModifiedPrice)
+				if err != nil {
+					return decimal.Decimal{}, err
+				}
+				subtotal = subtotal.Add(price)
+				break
+
+			} else {
+				/* add up the retail prices x quantity */
+				price, err := decimal.NewFromString(v[i].Price)
+				if err != nil {
+					return decimal.Decimal{}, err
+				}
+				subtotal = subtotal.Add(price)
+			}
+
+		}
+
+		bundleTotal = bundleTotal.Add(subtotal)
+	}
+
+	return bundleTotal, nil
+}
+
+func (service *ProductService) totalPrice(productOfferings []*ProductOffering) (string, error) {
 	total, err := decimal.NewFromString("0")
 	if err != nil {
 		return "NAN", err
 	}
-	retailPriceMap := make(map[int]decimal.Decimal)
-	bundlePriceMap := make(map[int]decimal.Decimal)
-	bestPriceMap := make(map[int]decimal.Decimal)
+	/* A map of deals to cart items that match those deals, used to calculate bundle prices */
+	bundledItems := make(map[int][]*ProductOffering)
+	/* a bit hacky, but this map tracks the count of each product in a bundle*/
+	bundledProductCount := make(map[int]int)
+	/* a map of deal_id to cart items */
 	for i := range productOfferings {
 		temp, err := decimal.NewFromString("0")
 		if err != nil {
 			return "NAN", err
 		}
-
-		if err != nil {
-			return "NAN", err
-		}
-		//var n int // the number of an item to reduce
 		po := *productOfferings[i]
+
 		switch po.Type {
 		case "Bundle":
-			// basically just sum up each deal/product
-			price, err := decimal.NewFromString(po.Price)
-			if err != nil {
-				return "NAN", err
-			}
-			modifiedPrice, ok := retailPriceMap[po.DealId]
-			quantity := decimal.NewFromInt(int64(po.Quantity))
-			temp := price.Mul(quantity)
-			if !ok {
-				retailPriceMap[po.DealId] = temp
-			} else {
-				retailPriceMap[po.DealId] = modifiedPrice.Add(temp)
-			}
 			// we don't decided on a final price until we finish looping over all the products
+			// so we add the each item in the cart to a list associated with the bundle it's in.
+			bundledItems[po.DealID] = append(bundledItems[po.DealID], &po)
+			// we also track the quantity of each product so we can calculate a price for multiple products
+			bundledProductCount[po.ProductID] = po.Quantity
 		case "BuyXGetY":
 
 			price, err := decimal.NewFromString(po.Price)
@@ -121,35 +151,10 @@ func totalPrice(productOfferings []*ProductOffering) (string, error) {
 
 		total = total.Add(temp)
 	}
-
-	offers := fitlerOfferByDealType(productOfferings, "Bundle")
-
-	// loop over the bundles, compare retailPrice to bundledPrice
-	for i := range offers {
-		offer := *offers[i]
-		modifiedPrice, ok := retailPriceMap[offer.DealId]
-		if !ok {
-			return "NAN", err
-		}
-
-		quantity := decimal.NewFromInt(int64(offer.Quantity))
-
-		bundlePrice, err := decimal.NewFromString(offer.ModifiedPrice)
-		totalBundlePrice := bundlePrice.Mul(quantity)
-		if err != nil {
-			return "NAN", err
-		}
-
-		bundlePriceMap[offer.DealId] = bundlePrice.Mul(quantity)
-
-		bestPriceMap[offer.DealId] = decimal.Min(totalBundlePrice, modifiedPrice)
-
+	bundledTotal, err := service.bundlePrice(bundledItems)
+	if err != nil {
+		return "NAN", err
 	}
-
-	// add the best prices for the bundles
-	for _, v := range bestPriceMap {
-		total = total.Add(v)
-	}
-
+	total = total.Add(bundledTotal)
 	return total.String(), nil
 }

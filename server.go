@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -20,24 +20,25 @@ func NewServer(config *Config, service *ProductService) *Server {
 	}
 }
 
-func (s *Server) Handler() http.Handler {
+func (server *Server) Handler() http.Handler {
 	router := http.NewServeMux()
-	router.HandleFunc("/products", s.findProducts)
-	router.HandleFunc("/products/create", s.createProduct)
-	router.HandleFunc("/products/update", s.updateProduct)
-	router.HandleFunc("/products/delete", s.deleteProduct)
-	router.HandleFunc("/deals", s.deals)
-	router.HandleFunc("/offerings", s.offerings)
-	router.HandleFunc("/cart", s.cart)
+	router.HandleFunc("/products", server.products)
+	router.HandleFunc("/deals", server.deals)
+	router.HandleFunc("/offerings", server.offerings)
+	router.HandleFunc("/cart", server.cart)
 	return router
 }
 
-func (s *Server) Run() {
+func (server *Server) Run() {
 	httpServer := &http.Server{
-		Addr:    ":" + s.config.Port,
-		Handler: s.Handler(),
+		Addr:    ":" + server.config.Port,
+		Handler: server.Handler(),
 	}
-	httpServer.ListenAndServe()
+	err := httpServer.ListenAndServe()
+	if err != nil {
+		log.Fatalf("Statement error %v", err.Error())
+	}
+
 }
 
 /* Cart Handler */
@@ -81,7 +82,10 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 
 		writer.Header().Set("Content-Type", jsonContentType)
 		writer.WriteHeader(http.StatusOK)
-		writer.Write(bytes)
+		_, err = writer.Write(bytes)
+		if err != nil {
+			http.Error(writer, "Failed to write response", 500)
+		}
 
 	case http.MethodPut:
 		var shoppingCart ShoppingCart
@@ -114,9 +118,13 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 		}
 		writer.Header().Set("Content-Type", jsonContentType)
 		writer.WriteHeader(http.StatusOK)
-		writer.Write(bytes)
+		_, err = writer.Write(bytes)
+		if err != nil {
+			http.Error(writer, "Failed to write response", 500)
+		}
 
 	case http.MethodGet:
+
 		items := server.productService.listCartItems()
 		var shoppingCart ShoppingCart
 
@@ -132,7 +140,10 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 		}
 		writer.Header().Set("Content-Type", jsonContentType)
 		writer.WriteHeader(http.StatusOK)
-		writer.Write(bytes)
+		_, err = writer.Write(bytes)
+		if err != nil {
+			http.Error(writer, "Failed to write response", 500)
+		}
 
 	}
 
@@ -170,11 +181,15 @@ func (server *Server) deals(writer http.ResponseWriter, request *http.Request) {
 		}
 		writer.Header().Set("Content-Type", jsonContentType)
 		writer.WriteHeader(http.StatusOK)
-		writer.Write(bytes)
+		_, err = writer.Write(bytes)
+		if err != nil {
+			http.Error(writer, "Failed to write response", 500)
+		}
 
 	case http.MethodPost:
 
 		var deal Deal
+
 		err := json.NewDecoder(request.Body).Decode(&deal)
 		if err != nil {
 			http.Error(writer, "Bad Request", 400)
@@ -189,59 +204,62 @@ func (server *Server) deals(writer http.ResponseWriter, request *http.Request) {
 
 }
 
-func (server *Server) findProducts(writer http.ResponseWriter, request *http.Request) {
-	products := server.productService.listProducts()
-	bytes, err := json.Marshal(products)
-	if err != nil {
-		http.Error(writer, "Bad Request", 400)
-	}
-	writer.Header().Set("Content-Type", jsonContentType)
-	writer.WriteHeader(http.StatusOK)
-	writer.Write(bytes)
-}
+func (server *Server) products(writer http.ResponseWriter, request *http.Request) {
 
-func (server *Server) deleteProduct(writer http.ResponseWriter, request *http.Request) {
-	var code ProductCode
-	err := json.NewDecoder(request.Body).Decode(&code)
+	switch request.Method {
+	case http.MethodGet:
+		products := server.productService.listProducts()
+		bytes, err := json.Marshal(products)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+		writer.Header().Set("Content-Type", jsonContentType)
+		writer.WriteHeader(http.StatusOK)
+		_, err = writer.Write(bytes)
+		if err != nil {
+			http.Error(writer, "Failed to write response", 500)
+		}
 
-	if err != nil {
-		http.Error(writer, "Bad Request", 400)
+	case http.MethodPost:
+		var product Product
+		err := json.NewDecoder(request.Body).Decode(&product)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+		err = server.productService.newProduct(product)
+		if err != nil {
+			http.Error(writer, "Failed to create new product", 500)
+		}
+
+		writer.WriteHeader(http.StatusCreated)
+
+	case http.MethodPut:
+		var product Product
+		err := json.NewDecoder(request.Body).Decode(&product)
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+		err = server.productService.updateProduct(product)
+		if err != nil {
+			http.Error(writer, "Failed to update the product", 500)
+		}
+		writer.WriteHeader(http.StatusNoContent)
+
+	case http.MethodDelete:
+		var product Product
+		err := json.NewDecoder(request.Body).Decode(&product)
+
+		if err != nil {
+			http.Error(writer, "Bad Request", 400)
+		}
+
+		err = server.productService.deleteProduct(product)
+		if err != nil {
+			http.Error(writer, "Failed to delete new product", 500)
+		}
+
+		writer.WriteHeader(http.StatusOK)
+
 	}
 
-	err = server.productService.deleteProduct(code)
-	if err != nil {
-		fmt.Errorf("Error in deleting product with id %d, %v", code.Id, err)
-		http.Error(writer, "Failed to delete new product", 500)
-	}
-
-	writer.WriteHeader(http.StatusOK)
-}
-
-func (server *Server) createProduct(writer http.ResponseWriter, request *http.Request) {
-	var product Product
-	err := json.NewDecoder(request.Body).Decode(&product)
-	if err != nil {
-		http.Error(writer, "Bad Request", 400)
-	}
-	err = server.productService.newProduct(product)
-	if err != nil {
-		fmt.Errorf("Error in creating product %q, %v", product, err)
-		http.Error(writer, "Failed to create new product", 500)
-	}
-
-	writer.WriteHeader(http.StatusCreated)
-}
-
-func (server *Server) updateProduct(writer http.ResponseWriter, request *http.Request) {
-	var product Product
-	err := json.NewDecoder(request.Body).Decode(&product)
-	if err != nil {
-		http.Error(writer, "Bad Request", 400)
-	}
-	err = server.productService.updateProduct(product)
-	if err != nil {
-		fmt.Errorf("Error in creating product %v", err)
-		http.Error(writer, "Failed to update the product", 500)
-	}
-	writer.WriteHeader(http.StatusNoContent)
 }

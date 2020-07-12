@@ -2,8 +2,9 @@ package main
 
 import (
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type DealType string
@@ -18,15 +19,6 @@ const (
 )
 
 /*
-   Helpful for signaling for delete or responses
-   @id
-*/
-
-type ProductCode struct {
-	Id int64 `json:"id"`
-}
-
-/*
    The Product model represents an item in stock or was in
    stock historically. Price is not the final price, but rather
    the set price at the time
@@ -37,7 +29,7 @@ type ProductCode struct {
 */
 
 type Product struct {
-	Id          int    `json:"id,omitempty"`
+	ID          int    `json:"id,omitempty"`
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	Price       string `json:"price"`
@@ -58,7 +50,7 @@ type Product struct {
    TODO: Add start and end timestamps
 */
 type Deal struct {
-	Id        int      `json:"id,omitempty"`
+	ID        int      `json:"id,omitempty"`
 	Name      string   `json:"name,omitempty"`
 	Type      DealType `json:"type,omitempty"`
 	Coupon    string   `json:"coupon,omitempty"`
@@ -86,17 +78,17 @@ type Deal struct {
 */
 
 type Offering struct {
-	Id            int    `json:"id,omitempty"`
-	ProductId     int    `json:"product_id,omitempty"`
-	DealId        int    `json:"deal_id,omitempty"`
+	ID            int    `json:"id,omitempty"`
+	ProductID     int    `json:"product_id,omitempty"`
+	DealID        int    `json:"deal_id,omitempty"`
 	ModifiedPrice string `json:"modified_price,omitempty"`
 	Active        bool   `json:"active,omitempty"`
 }
 
 /* After a join of offerings x products x deals, we get a product offering */
 type ProductOffering struct {
-	ProductId     int      `json:"product_id,omitempty"`
-	DealId        int      `json:"deal_id,omitempty"`
+	ProductID     int      `json:"product_id,omitempty"`
+	DealID        int      `json:"deal_id,omitempty"`
 	Quantity      int      `json:"quantity,omitempty"`
 	ModifiedPrice string   `json:"modified_price,omitempty"`
 	DealName      string   `json:"deal_name,omitempty"`
@@ -142,11 +134,19 @@ func (repository *ProductRepository) createCartTable() {
 	  );`
 
 	statement, err := repository.database.Prepare(createProductsTableSQL)
+	if err != nil {
+		log.Fatalf("Failed to open database connection")
+	}
+
 	defer statement.Close()
 	if err != nil {
 		log.Fatalf("Failed to create table: %v", err.Error())
 	}
-	statement.Exec()
+	_, err = statement.Exec()
+	if err != nil {
+		log.Fatalf("Database transaction failed: %v", err.Error())
+	}
+
 }
 
 func (repository *ProductRepository) createProductsTable() {
@@ -158,11 +158,19 @@ func (repository *ProductRepository) createProductsTable() {
 	  );`
 
 	statement, err := repository.database.Prepare(createProductsTableSQL)
+	if err != nil {
+		log.Fatalf("Failed to open database connection")
+	}
+
 	defer statement.Close()
 	if err != nil {
 		log.Fatalf("Failed to create table: %v", err.Error())
 	}
-	statement.Exec()
+	_, err = statement.Exec()
+	if err != nil {
+		log.Fatalf("Database transaction failed: %v", err.Error())
+	}
+
 }
 
 func (repository *ProductRepository) createDealsTable() {
@@ -178,11 +186,19 @@ func (repository *ProductRepository) createDealsTable() {
 	);`
 
 	statement, err := repository.database.Prepare(createDealsTableSQL)
+	if err != nil {
+		log.Fatalf("Failed to open database connection")
+	}
+
 	defer statement.Close()
 	if err != nil {
 		log.Fatalf("Failed to create table: %v", err.Error())
 	}
-	statement.Exec()
+	_, err = statement.Exec()
+	if err != nil {
+		log.Fatalf("Database transaction failed: %v", err.Error())
+	}
+
 }
 
 func (repository *ProductRepository) createOfferingsTable() {
@@ -196,9 +212,16 @@ func (repository *ProductRepository) createOfferingsTable() {
 	    FOREIGN KEY (deal_id) REFERENCES deals (id) );`
 
 	statement, err := repository.database.Prepare(createOfferingsTableSQL)
+	if err != nil {
+		log.Fatalf("Failed to open database connection")
+	}
 	defer statement.Close()
 	if err != nil {
 		log.Fatalf("Failed to create table: %v", err.Error())
 	}
-	statement.Exec()
+	_, err = statement.Exec()
+	if err != nil {
+		log.Fatalf("Database transaction failed: %v", err.Error())
+	}
+
 }

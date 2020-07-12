@@ -1,14 +1,15 @@
 package main
 
 import (
-	_ "github.com/mattn/go-sqlite3"
 	"log"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 /* Get all the relevant deals and offerings that are also in the cart*/
 func (repository *ProductRepository) getProductOfferings() []*ProductOffering {
 	rows, _ := repository.database.Query(`
-	    SELECT PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, modified_price
+SELECT PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, modified_price
 	    FROM (
 		SELECT products.id AS PID, products.name AS PNAME,
 		products.price, deals.id AS DID, deals.name AS DNAME,
@@ -24,27 +25,27 @@ func (repository *ProductRepository) getProductOfferings() []*ProductOffering {
 	var productOfferings []*ProductOffering
 	for rows.Next() {
 		var (
-			pid            int
-			did            int
-			pname          string
-			dname          string
-			price          string
-			quantity       int
-			dtype          DealType
-			coupon         string
-			percent        string
-			x              int
-			y              int
-			modified_price string
+			pid           int
+			did           int
+			pname         string
+			dname         string
+			price         string
+			quantity      int
+			dtype         DealType
+			coupon        string
+			percent       string
+			x             int
+			y             int
+			modifiedPrice string
 		)
-		err := rows.Scan(&pid, &did, &pname, &dname, &price, &quantity, &dtype, &coupon, &percent, &x, &y, &modified_price)
+		err := rows.Scan(&pid, &did, &pname, &dname, &price, &quantity, &dtype, &coupon, &percent, &x, &y, &modifiedPrice)
 		if err != nil {
 			log.Fatalf("DB Scan error %v", err.Error())
 		}
 
 		productOfferings = append(productOfferings, &ProductOffering{
-			ProductId:     pid,
-			DealId:        did,
+			ProductID:     pid,
+			DealID:        did,
 			ProductName:   pname,
 			DealName:      dname,
 			Type:          dtype,
@@ -54,7 +55,7 @@ func (repository *ProductRepository) getProductOfferings() []*ProductOffering {
 			Y:             y,
 			Coupon:        coupon,
 			Percent:       percent,
-			ModifiedPrice: modified_price,
+			ModifiedPrice: modifiedPrice,
 		})
 
 	}
@@ -64,7 +65,7 @@ func (repository *ProductRepository) getProductOfferings() []*ProductOffering {
 
 func (repository *ProductRepository) listCart() []Item {
 	rows, _ := repository.database.Query(`SELECT
-		products.id,
+products.id,
 		products.name,
 		products.description,
 		products.price,
@@ -92,7 +93,7 @@ func (repository *ProductRepository) listCart() []Item {
 
 		items = append(items, Item{
 			Product{
-				Id:          id,
+				ID:          id,
 				Name:        name,
 				Description: description,
 				Price:       price,
@@ -108,9 +109,10 @@ func (repository *ProductRepository) addToCart(product Product) error {
 	tx, _ := repository.database.Begin()
 	stmt, _ := tx.Prepare(`INSERT INTO cart (product_id) VALUES (?);`)
 	defer stmt.Close()
-	_, err := stmt.Exec(product.Id)
+	_, err := stmt.Exec(product.ID)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
+
 		log.Fatalf("Statement error %v", err.Error())
 	}
 
@@ -126,9 +128,28 @@ func (repository *ProductRepository) updateCart(item Item) error {
 	tx, _ := repository.database.Begin()
 	stmt, _ := tx.Prepare(`UPDATE cart SET quantity = ? WHERE product_id = ?;`)
 	defer stmt.Close()
-	_, err := stmt.Exec(item.Quantity, item.Product.Id)
+	_, err := stmt.Exec(item.Quantity, item.Product.ID)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
+		log.Fatalf("Statement error %v", err.Error())
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Fatalf("DB Commit error %v", err.Error())
+	}
+
+	return err
+}
+
+func (repository *ProductRepository) deleteCart(item Item) error {
+	tx, _ := repository.database.Begin()
+
+	stmt, _ := tx.Prepare(`DELETE FROM cart WHERE product_id = ?`)
+	defer stmt.Close()
+	_, err := stmt.Exec(item.Quantity, item.Product.ID)
+	if err != nil {
+		err = tx.Rollback()
 		log.Fatalf("Statement error %v", err.Error())
 	}
 
@@ -145,9 +166,9 @@ func (repository *ProductRepository) insertOffering(offering Offering) error {
 	tx, _ := repository.database.Begin()
 	stmt, _ := tx.Prepare(`INSERT INTO offerings (product_id, deal_id, modified_price, active) VALUES (?, ?, ?, ?);`)
 	defer stmt.Close()
-	_, err := stmt.Exec(offering.ProductId, offering.DealId, offering.ModifiedPrice, offering.Active)
+	_, err := stmt.Exec(offering.ProductID, offering.DealID, offering.ModifiedPrice, offering.Active)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
 		log.Fatalf("Statement error %v", err.Error())
 	}
 
@@ -159,6 +180,41 @@ func (repository *ProductRepository) insertOffering(offering Offering) error {
 	return err
 }
 
+/* Lists all the product ID's in a given bundle */
+func (repository *ProductRepository) getBundleComponents(dID int) []*Offering {
+
+	rows, _ := repository.database.Query(`SELECT * FROM offerings WHERE deal_id = ? ;`, dID)
+	defer rows.Close()
+
+	offerings := []*Offering{}
+
+	for rows.Next() {
+		var (
+			id            int
+			productID     int
+			dealID        int
+			modifiedPrice string
+			active        bool
+		)
+
+		err := rows.Scan(&id, &productID, &dealID, &modifiedPrice, &active)
+		if err != nil {
+
+			log.Fatalf("Error during scanning rows %v", err.Error())
+		}
+
+		offerings = append(offerings, &Offering{
+			ID:            id,
+			ProductID:     productID,
+			DealID:        dealID,
+			ModifiedPrice: modifiedPrice,
+			Active:        active,
+		})
+	}
+
+	return offerings
+}
+
 /* Deals */
 func (repository *ProductRepository) insertDeal(deal Deal) error {
 	tx, _ := repository.database.Begin()
@@ -166,7 +222,7 @@ func (repository *ProductRepository) insertDeal(deal Deal) error {
 	defer stmt.Close()
 	_, err := stmt.Exec(deal.Name, deal.Type, deal.Coupon, deal.Percent, deal.X, deal.Y, deal.Exclusive)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
 		log.Fatalf("Statement error %v", err.Error())
 	}
 
@@ -196,10 +252,14 @@ func (repository *ProductRepository) listDeals() []*Deal {
 			exclusive bool
 		)
 
-		rows.Scan(&id, &name, &btype, &coupon, &percent, &x, &y, &exclusive)
+		err := rows.Scan(&id, &name, &btype, &coupon, &percent, &x, &y, &exclusive)
+		if err != nil {
+
+			log.Fatalf("Error during scanning rows %v", err.Error())
+		}
 
 		deals = append(deals, &Deal{
-			Id:        id,
+			ID:        id,
 			Name:      name,
 			Type:      btype,
 			Coupon:    coupon,
@@ -220,7 +280,7 @@ func (repository *ProductRepository) insertProduct(product Product) error {
 	_, err := stmt.Exec(product.Name, product.Description, product.Price)
 
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
 		log.Fatalf("Statement error %v", err.Error())
 	}
 
@@ -236,9 +296,9 @@ func (repository *ProductRepository) updateProduct(product Product) error {
 	tx, _ := repository.database.Begin()
 	stmt, _ := tx.Prepare(`UPDATE products SET name = ?, description = ?, price = ? WHERE id = ?;`)
 	defer stmt.Close()
-	_, err := stmt.Exec(product.Name, product.Description, product.Price, product.Id) //.Scan(&id, &name, &description, &price)
+	_, err := stmt.Exec(product.Name, product.Description, product.Price, product.ID) //.Scan(&id, &name, &description, &price)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
 		log.Fatalf("Statement error %v", err.Error())
 	}
 
@@ -249,14 +309,14 @@ func (repository *ProductRepository) updateProduct(product Product) error {
 	return err
 }
 
-func (repository *ProductRepository) deleteProduct(code ProductCode) error {
+func (repository *ProductRepository) deleteProduct(product Product) error {
 	tx, _ := repository.database.Begin()
 	stmt, _ := tx.Prepare(`DELETE FROM products WHERE id = ?`)
 	defer stmt.Close()
 
-	_, err := stmt.Exec(code.Id)
+	_, err := stmt.Exec(product.ID)
 	if err != nil {
-		tx.Rollback()
+		err = tx.Rollback()
 		log.Fatalf("Statement error %v", err.Error())
 	}
 
@@ -281,10 +341,14 @@ func (repository *ProductRepository) listProducts() []*Product {
 			price       string
 		)
 
-		rows.Scan(&id, &name, &description, &price)
+		err := rows.Scan(&id, &name, &description, &price)
+		if err != nil {
+
+			log.Fatalf("Error during scanning rows %v", err.Error())
+		}
 
 		products = append(products, &Product{
-			Id:          id,
+			ID:          id,
 			Name:        name,
 			Description: description,
 			Price:       price,
@@ -295,7 +359,7 @@ func (repository *ProductRepository) listProducts() []*Product {
 }
 
 func (repository *ProductRepository) getProduct(product Product) (Product, error) {
-	row := repository.database.QueryRow(`SELECT id, name, description, price FROM products WHERE id = ?;`, product.Id)
+	row := repository.database.QueryRow(`SELECT id, name, description, price FROM products WHERE id = ?;`, product.ID)
 
 	var (
 		id          int
@@ -310,7 +374,7 @@ func (repository *ProductRepository) getProduct(product Product) (Product, error
 	}
 
 	product = Product{
-		Id:          id,
+		ID:          id,
 		Name:        name,
 		Description: description,
 		Price:       price,
