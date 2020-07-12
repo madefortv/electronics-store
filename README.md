@@ -1,11 +1,11 @@
-## Electronics Store
+# Electronics Store
 
-# Dependencies
+## Dependencies
 go 1.4
 sqlite
 
-# set up
-install [go]('https://golang.org/doc/install')
+## set up
+Install ['https://golang.org/doc/install'](go)
 - clone repository or use `go get`
 - compile the binary
 - seed the database
@@ -20,12 +20,12 @@ chmod +x create_database.sh
 The serve is listening on localhost:8000
 
 
-# run the tests
+## Run testing suite
 ```bash
 go test
 ```
 
-# Structure
+## Project Structure
 - main.go builds dependencies and injects into the server to run
 - server.go provides a router for handling different endpoints like: `http://localhost:8000/{products,cart,offerings,deals}`
 - service.go provides some abstraction to the database layer
@@ -41,8 +41,9 @@ Bundles do not "auto fill" in the other products from its bundle, they must be a
 Bundles only have one level, you there are no "bundles of bundles"
 
 # Approach
-a vanilla Go web applcation minus the sqlite and decimal packages for money safety.
-Utilize SQLite to buld 4 tables, products, deals, offerings, and cart
+This is a vanilla Go web applcation minus the sqlite and decimal packages for money safety.
+I used SQLite to buld 4 tables, products, deals, offerings, and cart. Avoided the use of sessions/cookies
+to keep it simple.
 
 Abstractly:
 
