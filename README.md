@@ -1,12 +1,15 @@
 # Electronics Store
 
 ## Dependencies
-go 1.4
-sqlite
+-go 1.4
+-sqlite
 
 ## set up
 Install ['https://golang.org/doc/install'](go)
-- clone repository or use `go get`
+- Use `go get`, then navigate to the directory the path `$GOPATH/src/github.com/madefortv/electronics-store`
+```bash
+go get -v github.com/madefortv/electronics-store
+```
 - compile the binary
 - seed the database
 - run the server
@@ -17,7 +20,19 @@ chmod +x create_database.sh
 ./store
 ```
 
-The serve is listening on localhost:8000
+## Example requests: The server is listening on `http://localhost:8000`
+
+List products
+```bash
+curl --header "Accept: application/json" --request --GET http://localhost:8000/products
+```
+
+Add product to cart
+```bash
+curl --header "Content-Type: application/json" --request --POST --data '{"id": 1, "name": "laptop", "description": "very fast", "price": "1000.00"}' http://localhost:8000/cart
+```
+
+This API maps the conventional POST/GET/PUT/DELETE HTTP Verbs to create, retrieve, update, delete operations of their respective endpoint/model.
 
 
 ## Run testing suite
