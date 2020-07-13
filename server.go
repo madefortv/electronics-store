@@ -165,10 +165,14 @@ func (server *Server) cart(writer http.ResponseWriter, request *http.Request) {
 		items := server.productService.listCartItems()
 		var shoppingCart ShoppingCart
 
-		if len(items) == 0 {
+		if len(items) < 1 {
 			shoppingCart = ShoppingCart{}
 		} else {
-			shoppingCart = ShoppingCart{items, "0.0"}
+			total, err := server.productService.calculateTotalPrice()
+			if err != nil {
+				http.Error(writer, "Error calculating total", 500)
+			}
+			shoppingCart = ShoppingCart{items, total}
 		}
 
 		bytes, err := json.Marshal(shoppingCart)

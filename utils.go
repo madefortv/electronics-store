@@ -144,7 +144,6 @@ func (service *ProductService) totalPrice(productOfferings []*ProductOffering) (
 			temp = price.Mul(quantity)
 
 		}
-
 		total = total.Add(temp)
 	}
 
@@ -154,5 +153,6 @@ func (service *ProductService) totalPrice(productOfferings []*ProductOffering) (
 		return "NAN", err
 	}
 	total = total.Add(bundledTotal)
+
 	return total.String(), nil
 }

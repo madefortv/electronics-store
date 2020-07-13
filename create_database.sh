@@ -50,8 +50,8 @@ sqlite3 store.db 'INSERT INTO deals (name, type) VALUES ("10% off any full price
 sqlite3 store.db 'INSERT INTO offerings (product_id, deal_id, active, modified_price) VALUES (1, 2, 1, "1000.00");'
 sqlite3 store.db 'INSERT INTO offerings (product_id, deal_id, active, modified_price) VALUES (2, 2, 1, "1000.00");'
 # retail items
-sqlite3 store.db 'INSERT INTO offerings (product_id, deal_id, active) VALUES (1, 1, 1);'
-sqlite3 store.db 'INSERT INTO offerings (product_id, deal_id, active) VALUES (2, 1, 1);'
+#sqlite3 store.db 'INSERT INTO offerings (product_id, deal_id, active) VALUES (1, 1, 1);'
+#sqlite3 store.db 'INSERT INTO offerings (product_id, deal_id, active) VALUES (2, 1, 1);'
 # coupon on monitor
 sqlite3 store.db 'INSERT INTO offerings (product_id, deal_id, active) VALUES (3, 3, 1);'
 # buy 2 get 1 freee usb
@@ -64,10 +64,10 @@ sqlite3 store.db 'INSERT INTO offerings (product_id, deal_id, active) VALUES (1,
 
 
 sqlite3 store.db 'INSERT INTO cart (product_id, quantity) VALUES (1, 1);'
-sqlite3 store.db 'INSERT INTO cart (product_id, quantity) VALUES (2, 1);'
-sqlite3 store.db 'INSERT INTO cart (product_id, quantity) VALUES (3, 1);'
-sqlite3 store.db 'INSERT INTO cart (product_id, quantity) VALUES (4, 3);'
-sqlite3 store.db 'INSERT INTO cart (product_id, quantity) VALUES (5, 1);'
+#sqlite3 store.db 'INSERT INTO cart (product_id, quantity) VALUES (2, 1);'
+#sqlite3 store.db 'INSERT INTO cart (product_id, quantity) VALUES (3, 1);'
+#sqlite3 store.db 'INSERT INTO cart (product_id, quantity) VALUES (4, 3);'
+#sqlite3 store.db 'INSERT INTO cart (product_id, quantity) VALUES (5, 1);'
 
 
 #sqlite3 store.db -header -column 'SELECT PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, modified_price  FROM (SELECT products.id AS PID, products.name AS PNAME, products.price, deals.id AS DID, deals.name AS DNAME, deals.type, deals.x, deals.y, deals.coupon, deals.percent, offerings.modified_price FROM offerings INNER JOIN products on products.id = offerings.product_id INNER JOIN deals on deals.id = offerings.deal_id WHERE active = 0) INNER JOIN cart on cart.product_id = pid WHERE cart.quantity > 0;'

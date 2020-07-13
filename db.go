@@ -9,7 +9,7 @@ import (
 /* Get all the relevant deals and offerings that are also in the cart*/
 func (repository *ProductRepository) getProductOfferings() []*ProductOffering {
 	rows, _ := repository.database.Query(`
-SELECT PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, modified_price
+	    SELECT PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, modified_price
 	    FROM (
 		SELECT products.id AS PID, products.name AS PNAME,
 		products.price, deals.id AS DID, deals.name AS DNAME,
@@ -65,7 +65,7 @@ SELECT PID, DID, PNAME, DNAME, price, quantity, type, coupon, percent, x, y, mod
 
 func (repository *ProductRepository) listCart() []Item {
 	rows, _ := repository.database.Query(`SELECT
-products.id,
+		products.id,
 		products.name,
 		products.description,
 		products.price,
@@ -183,32 +183,26 @@ func (repository *ProductRepository) insertOffering(offering Offering) error {
 /* Lists all the product ID's in a given bundle */
 func (repository *ProductRepository) getBundleComponents(dID int) []*Offering {
 
-	rows, _ := repository.database.Query(`SELECT * FROM offerings WHERE deal_id = ? ;`, dID)
+	rows, _ := repository.database.Query(`SELECT product_id, deal_id FROM offerings WHERE deal_id = ? ;`, dID)
 	defer rows.Close()
 
 	offerings := []*Offering{}
 
 	for rows.Next() {
 		var (
-			id            int
-			productID     int
-			dealID        int
-			modifiedPrice string
-			active        bool
+			productID int
+			dealID    int
 		)
 
-		err := rows.Scan(&id, &productID, &dealID, &modifiedPrice, &active)
+		err := rows.Scan(&productID, &dealID)
 		if err != nil {
 
 			log.Fatalf("Error during scanning rows %v", err.Error())
 		}
 
 		offerings = append(offerings, &Offering{
-			ID:            id,
-			ProductID:     productID,
-			DealID:        dealID,
-			ModifiedPrice: modifiedPrice,
-			Active:        active,
+			ProductID: productID,
+			DealID:    dealID,
 		})
 	}
 
